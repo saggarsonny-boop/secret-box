@@ -6,12 +6,12 @@ type Secret = { id: number; content: string; category: string; resonance: number
 type Comment = { id: number; secret_id: number; content: string; created_at: string };
 
 const MOODS = ['hollow','anxious','hopeful','numb','ashamed','seen','grief','love'];
-const FILTERS = ['all', ...MOODS];
+const FILTERS = [...MOODS, 'all'];
 const LANGS: { code: Lang; label: string; color: string }[] = [
-  { code: 'en', label: 'EN', color: '#b22234' },
-  { code: 'es', label: 'ES', color: '#c60b1e' },
-  { code: 'pt', label: 'PT', color: '#009c3b' },
-  { code: 'fr', label: 'FR', color: '#0055a4' },
+  { code: 'en', label: 'EN ·', color: '#c8b8a2' },
+  { code: 'es', label: 'ES ·', color: '#c8b8a2' },
+  { code: 'pt', label: 'PT ·', color: '#c8b8a2' },
+  { code: 'fr', label: 'FR', color: '#c8b8a2' },
 ];
 
 function timeAgo(dateStr: string): string {
@@ -30,7 +30,7 @@ export default function Home() {
   const [mostFelt, setMostFelt] = useState<Secret|null>(null);
   const [content, setContent] = useState('');
   const [category, setCategory] = useState('');
-  const [filter, setFilter] = useState('all');
+  const [filter, setFilter] = useState('hollow');
   const [lang, setLang] = useState<Lang>('en');
   const [view, setView] = useState<'feed'|'submit'|'followup'>('feed');
   const [loading, setLoading] = useState(false);
