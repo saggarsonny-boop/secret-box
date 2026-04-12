@@ -349,8 +349,8 @@ export default function Home() {
                 cursor:'pointer',
                 transition:'all 0.3s'
               }}
-              onMouseOver={e=>(e.currentTarget.style.borderColor='#c8b8a2',e.currentTarget.style.color='#c8b8a2')}
-              onMouseOut={e=>(e.currentTarget.style.borderColor='#2a2a2a',e.currentTarget.style.color='#444')}
+              onMouseEnter={e=>{e.currentTarget.style.borderColor='#c8b8a2';e.currentTarget.style.color='#c8b8a2';}}
+              onMouseLeave={e=>{e.currentTarget.style.borderColor='#2a2a2a';e.currentTarget.style.color='#444';}}
             >
               SUPPORT THIS
             </a>
