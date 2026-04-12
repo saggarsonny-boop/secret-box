@@ -165,7 +165,7 @@ export default function Home() {
 
       {view === 'submit' && !submitted && (
         <div>
-          <p style={{fontSize:'14px',color:'#666',marginBottom:'28px',lineHeight:'1.8',textAlign:'center'}}>Anonymous. No account. No trace.<br/>Just your truth.</p>
+          <p style={{fontSize:'14px',color:'#666',marginBottom:'28px',lineHeight:'1.8',textAlign:'center'}}>Anonymous. No account. No trace.<br/>Just your truth.<br/><span style={{color:'#555',fontSize:'12px'}}>Once shared, secrets are permanent.</span></p>
           <p style={{fontSize:'13px',color:'#888',marginBottom:'16px',letterSpacing:'1px'}}>HOW ARE YOU FEELING RIGHT NOW?</p>
           <div style={{display:'flex',flexWrap:'wrap',gap:'8px',marginBottom:'24px'}}>
             {MOODS.map(m => (
