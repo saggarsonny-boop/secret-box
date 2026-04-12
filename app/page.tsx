@@ -7,11 +7,11 @@ type Comment = { id: number; secret_id: number; content: string; created_at: str
 
 const MOODS = ['hollow','anxious','hopeful','numb','ashamed','seen','grief','love'];
 const FILTERS = [...MOODS, 'all'];
-const LANGS: { code: Lang; label: string; color: string }[] = [
-  { code: 'en', label: 'EN ·', color: '#c8b8a2' },
-  { code: 'es', label: 'ES ·', color: '#c8b8a2' },
-  { code: 'pt', label: 'PT ·', color: '#c8b8a2' },
-  { code: 'fr', label: 'FR', color: '#c8b8a2' },
+const LANGS: { code: Lang; label: string }[] = [
+  { code: 'en', label: 'EN' },
+  { code: 'es', label: 'ES' },
+  { code: 'pt', label: 'PT' },
+  { code: 'fr', label: 'FR' },
 ];
 
 function timeAgo(dateStr: string): string {
@@ -114,7 +114,7 @@ export default function Home() {
     });
     const data = await res.json();
     if (data.error) {
-      setCommentError(prev => ({...prev, [secret_id]: data.error === 'unkind' ? 'That might feel hurtful to someone who was brave enough to share. Try something kinder.' : data.error}));
+      setCommentError(prev => ({...prev, [secret_id]: data.error === 'unkind' ? 'That might feel hurtful to someone brave enough to share. Try something kinder.' : data.error}));
     } else {
       setComments(prev => ({...prev, [secret_id]: [...(prev[secret_id]||[]), data]}));
       setCommentInput(prev => ({...prev, [secret_id]: ''}));
@@ -139,8 +139,7 @@ export default function Home() {
     const file = e.target.files?.[0];
     if (!file) return;
     if (file.size > 5 * 1024 * 1024) { setImageError('Image must be under 5MB'); return; }
-    setImageError(null);
-    setImageUploading(true);
+    setImageError(null); setImageUploading(true);
     const reader = new FileReader();
     reader.onload = async (ev) => {
       const base64 = ev.target?.result as string;
@@ -233,7 +232,7 @@ export default function Home() {
         <p style={{fontSize:'11px',color: featured?'#888':'#444',letterSpacing:'2px',margin:0}}>{s.category.toUpperCase()}{label ? ` · ${label}` : ''}</p>
         <p style={{fontSize:'11px',color:'#333',margin:0}}>{timeAgo(s.created_at)}</p>
       </div>
-      <p style={{fontSize: featured?'17px':'16px',lineHeight:'1.7',color: featured?'#fff':'#ccc',maxHeight:'none'}}>{s.content}</p>
+      <p style={{fontSize: featured?'17px':'16px',lineHeight:'1.7',color: featured?'#fff':'#ccc'}}>{s.content}</p>
       {s.ai_response && s.ai_response !== 'You are not alone in this.' && (
         <p style={{fontSize:'14px',lineHeight:'1.7',color:'#c8b8a2',marginTop:'12px',fontStyle:'italic',borderLeft:'1px solid #333',paddingLeft:'12px'}}>{s.ai_response}</p>
       )}
@@ -256,14 +255,14 @@ export default function Home() {
       {showComments.has(s.id) && (
         <div style={{marginTop:'16px',borderTop:'1px solid #1a1a1a',paddingTop:'16px'}}>
           {(comments[s.id]||[]).map(c => (
-            <p key={c.id} style={{fontSize:'13px',color:'#888',margin:'0 0 8px 0',fontStyle:'italic'}}>"{c.content}"</p>
+            <p key={c.id} style={{fontSize:'13px',color:'#777',margin:'0 0 8px 0',fontStyle:'italic'}}>"{c.content}"</p>
           ))}
           <div style={{display:'flex',gap:'8px',marginTop:'12px'}}>
             <input
               value={commentInput[s.id]||''}
               onChange={e=>setCommentInput(prev=>({...prev,[s.id]:e.target.value.slice(0,80)}))}
               onKeyDown={e=>{ if(e.key==='Enter') submitComment(s.id); }}
-              placeholder="leave a whisper... (80 chars max)"
+              placeholder="leave a whisper..."
               style={{flex:1,background:'#0a0a0a',color:'#e8e8e8',border:'1px solid #222',padding:'8px 12px',fontSize:'12px',fontFamily:'Georgia,serif'}}
             />
             <button onClick={()=>submitComment(s.id)} disabled={commentLoading===s.id} style={{background:'none',border:'1px solid #333',color:'#666',padding:'8px 12px',cursor:'pointer',fontSize:'11px',letterSpacing:'1px'}}>
@@ -271,7 +270,7 @@ export default function Home() {
             </button>
           </div>
           {commentError[s.id] && <p style={{fontSize:'11px',color:'#c88',marginTop:'8px',lineHeight:'1.5'}}>{commentError[s.id]}</p>}
-          <p style={{fontSize:'10px',color:'#333',marginTop:'8px'}}>{(commentInput[s.id]||'').length}/80</p>
+          <p style={{fontSize:'10px',color:'#2a2a2a',marginTop:'4px'}}>{(commentInput[s.id]||'').length}/80</p>
         </div>
       )}
     </div>
@@ -283,10 +282,10 @@ export default function Home() {
         <div style={{display:'flex',justifyContent:'center',gap:'6px',marginBottom:'16px'}}>
           {LANGS.map(l => (
             <button key={l.code} onClick={()=>setLang(l.code)} style={{
-              background: lang===l.code ? l.color : 'transparent',
-              color: lang===l.code ? '#fff' : '#666',
-              border: `1px solid ${lang===l.code ? l.color : '#333'}`,
-              padding:'4px 12px',
+              background: lang===l.code ? '#c8b8a2' : 'transparent',
+              color: lang===l.code ? '#0a0a0a' : '#555',
+              border: `1px solid ${lang===l.code ? '#c8b8a2' : '#333'}`,
+              padding:'4px 14px',
               cursor:'pointer',
               fontSize:'11px',
               letterSpacing:'2px',
@@ -330,6 +329,32 @@ export default function Home() {
           {visibleSecrets.length === 0 && <p style={{textAlign:'center',color:'#444',fontSize:'14px'}}>{T.nothingHere}</p>}
           {visibleSecrets.map(s => <SecretCard key={s.id} s={s} />)}
           {visibleCount < filtered.length && <div ref={loadMoreRef} style={{height:'40px'}} />}
+
+          <div style={{textAlign:'center',marginTop:'48px',paddingTop:'32px',borderTop:'1px solid #111'}}>
+            <p style={{fontSize:'12px',color:'#333',marginBottom:'12px',lineHeight:'1.8'}}>
+              this app is free, forever.<br/>
+              <span style={{color:'#2a2a2a'}}>if it helped you, you can support it.</span>
+            </p>
+            
+              href="#support"
+              style={{
+                display:'inline-block',
+                background:'transparent',
+                border:'1px solid #2a2a2a',
+                color:'#444',
+                padding:'8px 24px',
+                fontSize:'11px',
+                letterSpacing:'2px',
+                textDecoration:'none',
+                cursor:'pointer',
+                transition:'all 0.3s'
+              }}
+              onMouseOver={e=>(e.currentTarget.style.borderColor='#c8b8a2',e.currentTarget.style.color='#c8b8a2')}
+              onMouseOut={e=>(e.currentTarget.style.borderColor='#2a2a2a',e.currentTarget.style.color='#444')}
+            >
+              SUPPORT THIS
+            </a>
+          </div>
         </div>
       )}
 
@@ -361,7 +386,7 @@ export default function Home() {
           </div>
           {personalInfoWarning && (
             <div style={{background:'#1a0a0a',border:'1px solid #c44',padding:'12px',marginTop:'8px'}}>
-              <p style={{fontSize:'12px',color:'#c88',margin:0,lineHeight:'1.6'}}>Your secret appears to contain personal information. For your safety, please remove it before sharing. This is a permanent public space.</p>
+              <p style={{fontSize:'12px',color:'#c88',margin:0,lineHeight:'1.6'}}>Your secret appears to contain personal information. For your safety, please remove it before sharing.</p>
             </div>
           )}
           <div style={{marginTop:'16px'}}>
