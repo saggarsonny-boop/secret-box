@@ -330,27 +330,7 @@ export default function Home() {
           {visibleSecrets.map(s => <SecretCard key={s.id} s={s} />)}
           {visibleCount < filtered.length && <div ref={loadMoreRef} style={{height:'40px'}} />}
 
-          <div style={{textAlign:'center',marginTop:'48px',paddingTop:'32px',borderTop:'1px solid #111'}}>
-            <p style={{fontSize:'12px',color:'#333',marginBottom:'12px',lineHeight:'1.8'}}>
-              this app is free, forever.<br/>
-              <span style={{color:'#2a2a2a'}}>if it helped you, you can support it.</span>
-            </p>
-            
-              href="#support"
-              style={{
-                display:'inline-block',
-                background:'transparent',
-                border:'1px solid #2a2a2a',
-                color:'#444',
-                padding:'8px 24px',
-                fontSize:'11px',
-                letterSpacing:'2px',
-                textDecoration:'none',
-                cursor:'pointer',
-                transition:'all 0.3s'
-              }}
->SUPPORT THIS</a>
-          </div>
+          <div style={{textAlign:'center',marginTop:'48px',paddingTop:'32px',borderTop:'1px solid #111'}}><p style={{fontSize:'12px',color:'#333',marginBottom:'12px',lineHeight:'1.8'}}>this app is free, forever.<br/><span style={{color:'#2a2a2a'}}>if it helped you, you can support it.</span></p><button onClick={()=>{}} style={{background:'transparent',border:'1px solid #2a2a2a',color:'#444',padding:'8px 24px',fontSize:'11px',letterSpacing:'2px',cursor:'pointer'}}>SUPPORT THIS</button></div>
         </div>
       )}
 
