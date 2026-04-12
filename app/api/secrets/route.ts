@@ -41,13 +41,13 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
-    const { content, category } = await req.json();
+    const { content, category, image_url } = await req.json();
     if (!content || content.length < 5) return NextResponse.json({ error: 'Too short' }, { status: 400 });
     const ai_response = await getAIResponse(content);
     const sql = getDb();
     const result = await sql`
-      INSERT INTO secrets (content, category, resonance, ai_response)
-      VALUES (${content}, ${category || 'general'}, 0, ${ai_response})
+      INSERT INTO secrets (content, category, resonance, ai_response, image_url)
+      VALUES (${content}, ${category || 'general'}, 0, ${ai_response}, ${image_url || null})
       RETURNING *
     `;
     return NextResponse.json(result[0]);
