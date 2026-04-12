@@ -38,6 +38,9 @@ export const t: Record<Lang, Record<string, string>> = {
     notAllowed: 'That image cannot be shared here.',
     uploadFailed: 'Upload failed. Try another image.',
     nothingHere: 'Nothing here yet.',
+    newSecrets: 'new secrets — tap to load',
+    someoneSharing: 'someone is sharing right now',
+    activeNow: 'active now',
   },
   es: {
     title: 'THE SECRET BOX',
@@ -76,6 +79,9 @@ export const t: Record<Lang, Record<string, string>> = {
     notAllowed: 'Esa imagen no se puede compartir aquí.',
     uploadFailed: 'Error al subir. Intenta con otra imagen.',
     nothingHere: 'Nada aquí todavía.',
+    newSecrets: 'nuevos secretos — toca para cargar',
+    someoneSharing: 'alguien está compartiendo ahora',
+    activeNow: 'activo ahora',
   },
   pt: {
     title: 'THE SECRET BOX',
@@ -114,6 +120,9 @@ export const t: Record<Lang, Record<string, string>> = {
     notAllowed: 'Essa imagem não pode ser compartilhada aqui.',
     uploadFailed: 'Falha no upload. Tente outra imagem.',
     nothingHere: 'Nada aqui ainda.',
+    newSecrets: 'novos segredos — toque para carregar',
+    someoneSharing: 'alguém está compartilhando agora',
+    activeNow: 'ativo agora',
   },
   fr: {
     title: 'THE SECRET BOX',
@@ -152,5 +161,8 @@ export const t: Record<Lang, Record<string, string>> = {
     notAllowed: 'Cette image ne peut pas être partagée ici.',
     uploadFailed: 'Échec du téléchargement. Essayez une autre image.',
     nothingHere: 'Rien ici encore.',
+    newSecrets: 'nouveaux secrets — appuyez pour charger',
+    someoneSharing: 'quelquun partage maintenant',
+    activeNow: 'actif maintenant',
   }
 };

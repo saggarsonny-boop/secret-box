@@ -27,6 +27,7 @@ function timeAgo(dateStr: string): string {
 
 export default function Home() {
   const [secrets, setSecrets] = useState<Secret[]>([]);
+  const [pendingSecrets, setPendingSecrets] = useState<Secret[]>([]);
   const [mostFelt, setMostFelt] = useState<Secret|null>(null);
   const [content, setContent] = useState('');
   const [category, setCategory] = useState('');
@@ -54,14 +55,48 @@ export default function Home() {
   const [commentError, setCommentError] = useState<Record<number, string>>({});
   const [commentLoading, setCommentLoading] = useState<number|null>(null);
   const [showComments, setShowComments] = useState<Set<number>>(new Set());
+  const [newCount, setNewCount] = useState(0);
+  const [activeCount, setActiveCount] = useState(0);
+  const [pulse, setPulse] = useState(false);
+  const lastFetchTime = useRef(Date.now());
   const fileRef = useRef<HTMLInputElement>(null);
   const observerRef = useRef<IntersectionObserver|null>(null);
   const T = t[lang];
 
   useEffect(() => {
-    fetch('/api/secrets').then(r=>r.json()).then(setSecrets).catch(()=>{});
+    fetch('/api/secrets').then(r=>r.json()).then(data => {
+      setSecrets(data);
+      lastFetchTime.current = Date.now();
+    }).catch(()=>{});
     fetch('/api/mostfelt').then(r=>r.json()).then(setMostFelt).catch(()=>{});
   }, []);
+
+  // Poll for new secrets every 30 seconds
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/live?since=${lastFetchTime.current}`);
+        const data = await res.json();
+        if (data.newCount > 0) {
+          setNewCount(data.newCount);
+          setPulse(true);
+          setTimeout(() => setPulse(false), 1000);
+        }
+        setActiveCount(data.activeCount);
+      } catch {}
+    }, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  async function loadNewSecrets() {
+    const res = await fetch('/api/secrets');
+    const data = await res.json();
+    setSecrets(data);
+    lastFetchTime.current = Date.now();
+    setNewCount(0);
+    setPendingSecrets([]);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -183,6 +218,17 @@ export default function Home() {
     setTimeout(() => setCopied(null), 2000);
   }
 
+  async function handleNativeShare(secret: Secret) {
+    const shareText = `"${secret.content}" — you are not alone\n\nbit.ly/secret-safe`;
+    if (navigator.share) {
+      try {
+        await navigator.share({ text: shareText, url: 'https://bit.ly/secret-safe' });
+        return;
+      } catch {}
+    }
+    handleShare(secret);
+  }
+
   async function handleShare(secret: Secret) {
     setSharing(secret.id);
     const canvas = document.createElement('canvas');
@@ -246,7 +292,7 @@ export default function Home() {
         <button onClick={()=>handleCopy(s)} style={{background:'none',border:'none',color: copied===s.id?'#c8b8a2':'#444',cursor:'pointer',fontSize:'11px',padding:'0',letterSpacing:'1px'}}>
           {copied===s.id ? T.copied : T.copy}
         </button>
-        <button onClick={()=>handleShare(s)} style={{background:'none',border:'none',color:'#444',cursor:'pointer',fontSize:'11px',padding:'0',letterSpacing:'1px'}}>
+        <button onClick={()=>handleNativeShare(s)} style={{background:'none',border:'none',color:'#444',cursor:'pointer',fontSize:'11px',padding:'0',letterSpacing:'1px'}}>
           {sharing===s.id?'...':'↗ SHARE'}
         </button>
         {featured && <button onClick={showRandom} style={{background:'none',border:'none',color:'#444',cursor:'pointer',fontSize:'11px',letterSpacing:'1px'}}>{T.next}</button>}
@@ -278,29 +324,31 @@ export default function Home() {
 
   return (
     <main style={{background:'#0a0a0a',minHeight:'100vh',color:'#e8e8e8',fontFamily:'Georgia,serif',maxWidth:'600px',margin:'0 auto',padding:'24px 16px'}}>
+
+      {newCount > 0 && (
+        <div onClick={loadNewSecrets} style={{position:'fixed',top:'12px',left:'50%',transform:'translateX(-50%)',background:'#c8b8a2',color:'#0a0a0a',padding:'8px 20px',fontSize:'12px',letterSpacing:'2px',cursor:'pointer',zIndex:100,borderRadius:'2px',boxShadow:'0 2px 12px rgba(0,0,0,0.5)'}}>
+          {newCount} {T.newSecrets}
+        </div>
+      )}
+
       <div style={{textAlign:'center',marginBottom:'24px'}}>
         <div style={{display:'flex',justifyContent:'center',gap:'6px',marginBottom:'16px'}}>
           {LANGS.map(l => (
-            <button key={l.code} onClick={()=>setLang(l.code)} style={{
-              background: lang===l.code ? '#c8b8a2' : 'transparent',
-              color: lang===l.code ? '#0a0a0a' : '#555',
-              border: `1px solid ${lang===l.code ? '#c8b8a2' : '#333'}`,
-              padding:'4px 14px',
-              cursor:'pointer',
-              fontSize:'11px',
-              letterSpacing:'2px',
-              fontWeight: lang===l.code ? 'bold' : 'normal',
-              transition:'all 0.2s'
-            }}>
+            <button key={l.code} onClick={()=>setLang(l.code)} style={{background: lang===l.code?'#c8b8a2':'transparent',color: lang===l.code?'#0a0a0a':'#555',border:`1px solid ${lang===l.code?'#c8b8a2':'#333'}`,padding:'4px 14px',cursor:'pointer',fontSize:'11px',letterSpacing:'2px',fontWeight: lang===l.code?'bold':'normal',transition:'all 0.2s'}}>
               {l.label}
             </button>
           ))}
         </div>
         <h1 style={{fontSize:'28px',fontWeight:'300',letterSpacing:'4px',color:'#c8b8a2'}}>{T.title}</h1>
         <p style={{fontSize:'13px',color:'#666',marginTop:'8px'}}>{T.tagline}</p>
-        <div style={{marginTop:'12px',display:'flex',justifyContent:'center',gap:'24px'}}>
+        <div style={{marginTop:'12px',display:'flex',justifyContent:'center',gap:'24px',flexWrap:'wrap'}}>
           {totalSecrets > 0 && <p style={{fontSize:'12px',color:'#444',letterSpacing:'1px'}}>{totalSecrets.toLocaleString()} {T.secretsShared}</p>}
           {totalResonance > 0 && <p style={{fontSize:'12px',color:'#444',letterSpacing:'1px'}}>{totalResonance.toLocaleString()} {T.peopleSaidMeToo}</p>}
+          {activeCount > 0 && (
+            <p style={{fontSize:'12px',letterSpacing:'1px',color: pulse?'#c8b8a2':'#333',transition:'color 0.5s'}}>
+              ● {activeCount} {T.activeNow}
+            </p>
+          )}
         </div>
       </div>
 
@@ -330,7 +378,14 @@ export default function Home() {
           {visibleSecrets.map(s => <SecretCard key={s.id} s={s} />)}
           {visibleCount < filtered.length && <div ref={loadMoreRef} style={{height:'40px'}} />}
 
-          <div style={{textAlign:'center',marginTop:'48px',paddingTop:'32px',borderTop:'1px solid #111'}}><p style={{fontSize:'12px',color:'#333',marginBottom:'16px',lineHeight:'1.8'}}>this app is free, forever.<br/><span style={{color:'#2a2a2a'}}>if it helped you, you can support it.</span></p><div style={{display:'flex',gap:'8px',justifyContent:'center',flexWrap:'wrap'}}><button onClick={()=>window.open('https://buy.stripe.com/14A6oJ6Mv3sReEa0YV0RG00','_blank')} style={{background:'transparent',border:'1px solid #2a2a2a',color:'#444',padding:'8px 16px',fontSize:'11px',letterSpacing:'1px',cursor:'pointer'}}>$1.99 / mo</button><button onClick={()=>window.open('https://buy.stripe.com/7sYcN79YHe7v53AcHD0RG01','_blank')} style={{background:'transparent',border:'1px solid #2a2a2a',color:'#444',padding:'8px 16px',fontSize:'11px',letterSpacing:'1px',cursor:'pointer'}}>$19 / yr</button><button onClick={()=>window.open('https://buy.stripe.com/9B6aEZ7Qzd3rcw2bDz0RG02','_blank')} style={{background:'transparent',border:'1px solid #2a2a2a',color:'#444',padding:'8px 16px',fontSize:'11px',letterSpacing:'1px',cursor:'pointer'}}>$5 once</button></div></div>
+          <div style={{textAlign:'center',marginTop:'48px',paddingTop:'32px',borderTop:'1px solid #111'}}>
+            <p style={{fontSize:'12px',color:'#333',marginBottom:'16px',lineHeight:'1.8'}}>this app is free, forever.<br/><span style={{color:'#2a2a2a'}}>if it helped you, you can support it.</span></p>
+            <div style={{display:'flex',gap:'8px',justifyContent:'center',flexWrap:'wrap'}}>
+              <button onClick={()=>window.open('https://buy.stripe.com/14A6oJ6Mv3sReEa0YV0RG00','_blank')} style={{background:'transparent',border:'1px solid #2a2a2a',color:'#444',padding:'8px 16px',fontSize:'11px',letterSpacing:'1px',cursor:'pointer'}}>\$1.99 / mo</button>
+              <button onClick={()=>window.open('https://buy.stripe.com/7sYcN79YHe7v53AcHD0RG01','_blank')} style={{background:'transparent',border:'1px solid #2a2a2a',color:'#444',padding:'8px 16px',fontSize:'11px',letterSpacing:'1px',cursor:'pointer'}}>\$19 / yr</button>
+              <button onClick={()=>window.open('https://buy.stripe.com/9B6aEZ7Qzd3rcw2bDz0RG02','_blank')} style={{background:'transparent',border:'1px solid #2a2a2a',color:'#444',padding:'8px 16px',fontSize:'11px',letterSpacing:'1px',cursor:'pointer'}}>\$5 once</button>
+            </div>
+          </div>
         </div>
       )}
 
