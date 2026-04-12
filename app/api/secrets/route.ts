@@ -1,6 +1,13 @@
 import { getDb } from '@/lib/db';
 import { NextResponse } from 'next/server';
 
+function containsPersonalInfo(text: string): boolean {
+  const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/;
+  const phoneRegex = /(\+?1?\s?)?(\(?\d{3}\)?[\s.-]?)(\d{3}[\s.-]?\d{4})/;
+  const namePatterns = /my name is|i am called|i'm called|call me/i;
+  return emailRegex.test(text) || phoneRegex.test(text) || namePatterns.test(text);
+}
+
 async function getAIResponse(content: string): Promise<string> {
   try {
     const key = process.env.ANTHROPIC_API_KEY;
@@ -17,7 +24,7 @@ async function getAIResponse(content: string): Promise<string> {
         max_tokens: 150,
         messages: [{
           role: 'user',
-          content: `Someone anonymously shared this secret: "${content}"\n\nWrite a single short, warm, human response (2-3 sentences max) that makes them feel less alone. No advice. Just compassion.`
+          content: `Someone anonymously shared this secret: "${content}"\n\nWrite a single short, warm, human response (2-3 sentences max) that makes them feel less alone. No advice. Just compassion. Respond in the same language as the secret.`
         }]
       })
     });
@@ -43,6 +50,7 @@ export async function POST(req: Request) {
   try {
     const { content, category, image_url } = await req.json();
     if (!content || content.length < 5) return NextResponse.json({ error: 'Too short' }, { status: 400 });
+    if (containsPersonalInfo(content)) return NextResponse.json({ error: 'personal_info' }, { status: 400 });
     const ai_response = await getAIResponse(content);
     const sql = getDb();
     const result = await sql`
