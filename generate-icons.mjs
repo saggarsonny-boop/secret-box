@@ -5,61 +5,70 @@ function generateIcon(size) {
   const canvas = createCanvas(size, size);
   const ctx = canvas.getContext('2d');
 
-  // Dark background
   ctx.fillStyle = '#080808';
   ctx.fillRect(0, 0, size, size);
 
-  // Warm glow
-  const glow = ctx.createRadialGradient(size*0.5, size*0.5, 0, size*0.5, size*0.5, size*0.4);
-  glow.addColorStop(0, 'rgba(200,140,60,0.35)');
+  const cx = size * 0.5;
+  const cy = size * 0.5;
+  const ew = size * 0.42;
+  const eh = size * 0.18;
+
+  // Glow behind eye
+  const glow = ctx.createRadialGradient(cx, cy, 0, cx, cy, ew);
+  glow.addColorStop(0, 'rgba(200,140,60,0.3)');
   glow.addColorStop(1, 'rgba(0,0,0,0)');
   ctx.fillStyle = glow;
   ctx.fillRect(0, 0, size, size);
 
-  const kx = size * 0.5;
-  const ky = size * 0.38;
-  const kr = size * 0.13;
-
-  // Keyhole outline — gold
+  // Eye white
   ctx.fillStyle = '#c8b8a2';
-
-  // Circle top
   ctx.beginPath();
-  ctx.arc(kx, ky, kr, 0, Math.PI * 2);
+  ctx.ellipse(cx, cy, ew, eh, 0, 0, Math.PI * 2);
   ctx.fill();
 
-  // Narrow teardrop bottom
+  // Iris
+  const iris = ctx.createRadialGradient(cx, cy, 0, cx, cy, eh * 0.85);
+  iris.addColorStop(0, '#d4822a');
+  iris.addColorStop(0.6, '#8b4513');
+  iris.addColorStop(1, '#3a1a05');
+  ctx.fillStyle = iris;
   ctx.beginPath();
-  ctx.moveTo(kx - kr * 0.75, ky + kr * 0.5);
-  ctx.lineTo(kx - kr * 0.45, ky + kr * 2.8);
-  ctx.lineTo(kx + kr * 0.45, ky + kr * 2.8);
-  ctx.lineTo(kx + kr * 0.75, ky + kr * 0.5);
+  ctx.arc(cx, cy, eh * 0.85, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Keyhole pupil
+  const kx = cx;
+  const ky = cy - eh * 0.05;
+  const kr = eh * 0.35;
+
+  ctx.fillStyle = '#080808';
+  ctx.beginPath();
+  ctx.arc(kx, ky - kr * 0.3, kr, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.beginPath();
+  ctx.moveTo(kx - kr * 0.6, ky);
+  ctx.lineTo(kx - kr * 0.35, ky + kr * 1.5);
+  ctx.lineTo(kx + kr * 0.35, ky + kr * 1.5);
+  ctx.lineTo(kx + kr * 0.6, ky);
   ctx.closePath();
   ctx.fill();
 
-  // Peek hole glow
-  const peekGlow = ctx.createRadialGradient(kx, ky, 0, kx, ky, kr*0.7);
-  peekGlow.addColorStop(0, 'rgba(240,160,60,1)');
-  peekGlow.addColorStop(0.5, 'rgba(180,100,20,0.9)');
-  peekGlow.addColorStop(1, 'rgba(80,40,5,0.5)');
-  ctx.fillStyle = peekGlow;
+  // Eyelid lines
+  ctx.strokeStyle = '#a09080';
+  ctx.lineWidth = size * 0.012;
   ctx.beginPath();
-  ctx.arc(kx, ky, kr * 0.65, 0, Math.PI * 2);
-  ctx.fill();
-
-  // Dark slit in bottom
-  ctx.fillStyle = '#050302';
+  ctx.moveTo(cx - ew, cy);
+  ctx.quadraticCurveTo(cx, cy - eh * 1.8, cx + ew, cy);
+  ctx.stroke();
   ctx.beginPath();
-  ctx.moveTo(kx - kr * 0.28, ky + kr * 0.8);
-  ctx.lineTo(kx - kr * 0.18, ky + kr * 2.6);
-  ctx.lineTo(kx + kr * 0.18, ky + kr * 2.6);
-  ctx.lineTo(kx + kr * 0.28, ky + kr * 0.8);
-  ctx.closePath();
-  ctx.fill();
+  ctx.moveTo(cx - ew, cy);
+  ctx.quadraticCurveTo(cx, cy + eh * 1.8, cx + ew, cy);
+  ctx.stroke();
 
   return canvas.toBuffer('image/png');
 }
 
 writeFileSync('public/icons/icon-192.png', generateIcon(192));
 writeFileSync('public/icons/icon-512.png', generateIcon(512));
-console.log('Keyhole icons created!');
+console.log('Eye keyhole icons created!');
