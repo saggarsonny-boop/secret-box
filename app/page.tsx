@@ -3,14 +3,15 @@ import { useEffect, useState, useRef, useCallback } from 'react';
 import { t, Lang } from '@/lib/translations';
 
 type Secret = { id: number; content: string; category: string; resonance: number; created_at: string; ai_response?: string; image_url?: string };
+type Comment = { id: number; secret_id: number; content: string; created_at: string };
 
 const MOODS = ['hollow','anxious','hopeful','numb','ashamed','seen','grief','love'];
 const FILTERS = ['all', ...MOODS];
-const LANGS: { code: Lang; flag: string }[] = [
-  { code: 'en', flag: '🇺🇸' },
-  { code: 'es', flag: '🇪🇸' },
-  { code: 'pt', flag: '🇧🇷' },
-  { code: 'fr', flag: '🇫🇷' },
+const LANGS: { code: Lang; label: string; color: string }[] = [
+  { code: 'en', label: 'EN', color: '#b22234' },
+  { code: 'es', label: 'ES', color: '#c60b1e' },
+  { code: 'pt', label: 'PT', color: '#009c3b' },
+  { code: 'fr', label: 'FR', color: '#0055a4' },
 ];
 
 function timeAgo(dateStr: string): string {
@@ -48,6 +49,11 @@ export default function Home() {
   const [personalInfoWarning, setPersonalInfoWarning] = useState(false);
   const [visibleCount, setVisibleCount] = useState(10);
   const [visible, setVisible] = useState<Set<number>>(new Set());
+  const [comments, setComments] = useState<Record<number, Comment[]>>({});
+  const [commentInput, setCommentInput] = useState<Record<number, string>>({});
+  const [commentError, setCommentError] = useState<Record<number, string>>({});
+  const [commentLoading, setCommentLoading] = useState<number|null>(null);
+  const [showComments, setShowComments] = useState<Set<number>>(new Set());
   const fileRef = useRef<HTMLInputElement>(null);
   const observerRef = useRef<IntersectionObserver|null>(null);
   const T = t[lang];
@@ -79,6 +85,42 @@ export default function Home() {
     });
     observerRef.current.observe(node);
   }, []);
+
+  async function loadComments(secret_id: number) {
+    if (comments[secret_id]) return;
+    const res = await fetch(`/api/comments?secret_id=${secret_id}`);
+    const data = await res.json();
+    setComments(prev => ({...prev, [secret_id]: data}));
+  }
+
+  function toggleComments(secret_id: number) {
+    setShowComments(prev => {
+      const next = new Set(prev);
+      if (next.has(secret_id)) { next.delete(secret_id); }
+      else { next.add(secret_id); loadComments(secret_id); }
+      return next;
+    });
+  }
+
+  async function submitComment(secret_id: number) {
+    const text = commentInput[secret_id];
+    if (!text || text.length < 2) return;
+    setCommentLoading(secret_id);
+    setCommentError(prev => ({...prev, [secret_id]: ''}));
+    const res = await fetch('/api/comments', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({secret_id, content: text})
+    });
+    const data = await res.json();
+    if (data.error) {
+      setCommentError(prev => ({...prev, [secret_id]: data.error === 'unkind' ? 'That might feel hurtful to someone who was brave enough to share. Try something kinder.' : data.error}));
+    } else {
+      setComments(prev => ({...prev, [secret_id]: [...(prev[secret_id]||[]), data]}));
+      setCommentInput(prev => ({...prev, [secret_id]: ''}));
+    }
+    setCommentLoading(null);
+  }
 
   function showRandom() {
     const pool = secrets.filter(s => s.id !== random?.id);
@@ -121,22 +163,15 @@ export default function Home() {
     setLoading(true);
     const res = await fetch('/api/secrets', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({content, category, image_url: imageUrl}) });
     const data = await res.json();
-    if (data.error === 'personal_info') {
-      setPersonalInfoWarning(true);
-      setLoading(false);
-      return;
-    }
-    setLoading(false);
-    setSubmitted(true);
-    setView('followup');
+    if (data.error === 'personal_info') { setPersonalInfoWarning(true); setLoading(false); return; }
+    setLoading(false); setSubmitted(true); setView('followup');
   }
 
   function handleKeyDown(e: React.KeyboardEvent) { if (e.key === 'Enter' && e.ctrlKey) handleSubmit(); }
 
   async function handleResonate(id: number) {
     if (resonated.has(id)) return;
-    setPulsing(id);
-    setTimeout(() => setPulsing(null), 600);
+    setPulsing(id); setTimeout(() => setPulsing(null), 600);
     setResonated(prev => new Set([...prev, id]));
     await fetch('/api/resonate', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({id}) });
     setSecrets(s => s.map(x => x.id === id ? {...x, resonance: x.resonance+1} : x));
@@ -198,22 +233,16 @@ export default function Home() {
         <p style={{fontSize:'11px',color: featured?'#888':'#444',letterSpacing:'2px',margin:0}}>{s.category.toUpperCase()}{label ? ` · ${label}` : ''}</p>
         <p style={{fontSize:'11px',color:'#333',margin:0}}>{timeAgo(s.created_at)}</p>
       </div>
-      <p style={{fontSize: featured?'17px':'16px',lineHeight:'1.7',color: featured?'#fff':'#ccc'}}>{s.content}</p>
+      <p style={{fontSize: featured?'17px':'16px',lineHeight:'1.7',color: featured?'#fff':'#ccc',maxHeight:'none'}}>{s.content}</p>
       {s.ai_response && s.ai_response !== 'You are not alone in this.' && (
         <p style={{fontSize:'14px',lineHeight:'1.7',color:'#c8b8a2',marginTop:'12px',fontStyle:'italic',borderLeft:'1px solid #333',paddingLeft:'12px'}}>{s.ai_response}</p>
       )}
       <div style={{display:'flex',gap:'16px',marginTop:'12px',alignItems:'center',flexWrap:'wrap'}}>
-        <button onClick={()=>handleResonate(s.id)} style={{
-          background: pulsing===s.id ? 'rgba(200,184,162,0.1)' : 'none',
-          border:'none',
-          color: resonated.has(s.id)?'#c8b8a2':'#555',
-          cursor: resonated.has(s.id)?'default':'pointer',
-          fontSize:'13px',padding:'4px 8px',
-          transition:'all 0.3s',
-          transform: pulsing===s.id?'scale(1.4)':'scale(1)',
-          borderRadius:'4px'
-        }}>
+        <button onClick={()=>handleResonate(s.id)} style={{background: pulsing===s.id?'rgba(200,184,162,0.1)':'none',border:'none',color: resonated.has(s.id)?'#c8b8a2':'#555',cursor: resonated.has(s.id)?'default':'pointer',fontSize:'13px',padding:'4px 8px',transition:'all 0.3s',transform: pulsing===s.id?'scale(1.4)':'scale(1)',borderRadius:'4px'}}>
           {resonated.has(s.id)?'◆':'◇'} {s.resonance} {T.feltThis}
+        </button>
+        <button onClick={()=>toggleComments(s.id)} style={{background:'none',border:'none',color:'#444',cursor:'pointer',fontSize:'11px',padding:'0',letterSpacing:'1px'}}>
+          ◌ {showComments.has(s.id) ? 'HIDE' : 'WHISPER'}
         </button>
         <button onClick={()=>handleCopy(s)} style={{background:'none',border:'none',color: copied===s.id?'#c8b8a2':'#444',cursor:'pointer',fontSize:'11px',padding:'0',letterSpacing:'1px'}}>
           {copied===s.id ? T.copied : T.copy}
@@ -223,16 +252,48 @@ export default function Home() {
         </button>
         {featured && <button onClick={showRandom} style={{background:'none',border:'none',color:'#444',cursor:'pointer',fontSize:'11px',letterSpacing:'1px'}}>{T.next}</button>}
       </div>
+
+      {showComments.has(s.id) && (
+        <div style={{marginTop:'16px',borderTop:'1px solid #1a1a1a',paddingTop:'16px'}}>
+          {(comments[s.id]||[]).map(c => (
+            <p key={c.id} style={{fontSize:'13px',color:'#888',margin:'0 0 8px 0',fontStyle:'italic'}}>"{c.content}"</p>
+          ))}
+          <div style={{display:'flex',gap:'8px',marginTop:'12px'}}>
+            <input
+              value={commentInput[s.id]||''}
+              onChange={e=>setCommentInput(prev=>({...prev,[s.id]:e.target.value.slice(0,80)}))}
+              onKeyDown={e=>{ if(e.key==='Enter') submitComment(s.id); }}
+              placeholder="leave a whisper... (80 chars max)"
+              style={{flex:1,background:'#0a0a0a',color:'#e8e8e8',border:'1px solid #222',padding:'8px 12px',fontSize:'12px',fontFamily:'Georgia,serif'}}
+            />
+            <button onClick={()=>submitComment(s.id)} disabled={commentLoading===s.id} style={{background:'none',border:'1px solid #333',color:'#666',padding:'8px 12px',cursor:'pointer',fontSize:'11px',letterSpacing:'1px'}}>
+              {commentLoading===s.id?'...':'SEND'}
+            </button>
+          </div>
+          {commentError[s.id] && <p style={{fontSize:'11px',color:'#c88',marginTop:'8px',lineHeight:'1.5'}}>{commentError[s.id]}</p>}
+          <p style={{fontSize:'10px',color:'#333',marginTop:'8px'}}>{(commentInput[s.id]||'').length}/80</p>
+        </div>
+      )}
     </div>
   );
 
   return (
     <main style={{background:'#0a0a0a',minHeight:'100vh',color:'#e8e8e8',fontFamily:'Georgia,serif',maxWidth:'600px',margin:'0 auto',padding:'24px 16px'}}>
       <div style={{textAlign:'center',marginBottom:'24px'}}>
-        <div style={{display:'flex',justifyContent:'center',gap:'8px',marginBottom:'16px'}}>
+        <div style={{display:'flex',justifyContent:'center',gap:'6px',marginBottom:'16px'}}>
           {LANGS.map(l => (
-            <button key={l.code} onClick={()=>setLang(l.code)} style={{background: lang===l.code?'#1a1a1a':'transparent',border:`1px solid ${lang===l.code?'#c8b8a2':'#333'}`,padding:'4px 10px',cursor:'pointer',fontSize:'16px',borderRadius:'4px',transition:'all 0.2s'}}>
-              {l.flag}
+            <button key={l.code} onClick={()=>setLang(l.code)} style={{
+              background: lang===l.code ? l.color : 'transparent',
+              color: lang===l.code ? '#fff' : '#666',
+              border: `1px solid ${lang===l.code ? l.color : '#333'}`,
+              padding:'4px 12px',
+              cursor:'pointer',
+              fontSize:'11px',
+              letterSpacing:'2px',
+              fontWeight: lang===l.code ? 'bold' : 'normal',
+              transition:'all 0.2s'
+            }}>
+              {l.label}
             </button>
           ))}
         </div>
@@ -287,22 +348,20 @@ export default function Home() {
           <div style={{position:'relative'}}>
             <textarea
               value={content}
-              onChange={e=>{ setContent(e.target.value); checkPersonalInfo(e.target.value); }}
+              onChange={e=>{ setContent(e.target.value.slice(0,500)); checkPersonalInfo(e.target.value); }}
               onKeyDown={handleKeyDown}
               placeholder={T.placeholder}
               rows={6}
               style={{width:'100%',background:'#111',color:'#e8e8e8',border:`1px solid ${personalInfoWarning?'#c44':'#333'}`,padding:'16px',fontSize:'15px',lineHeight:'1.7',resize:'vertical',fontFamily:'Georgia,serif',boxSizing:'border-box'}}
             />
             <div style={{display:'flex',justifyContent:'space-between',marginTop:'4px'}}>
-              <span style={{fontSize:'11px',color: content.length > 400 ? '#c8b8a2' : '#333'}}>{content.length} chars</span>
+              <span style={{fontSize:'11px',color: content.length > 400 ? '#c8b8a2' : '#333'}}>{content.length}/500</span>
               {content.length > 0 && <span style={{fontSize:'11px',color:'#333'}}>Ctrl+Enter to send</span>}
             </div>
           </div>
           {personalInfoWarning && (
             <div style={{background:'#1a0a0a',border:'1px solid #c44',padding:'12px',marginTop:'8px'}}>
-              <p style={{fontSize:'12px',color:'#c88',margin:0,lineHeight:'1.6'}}>
-                Your secret appears to contain personal information (name, email, or phone number). For your safety and privacy, please remove it before sharing. This is a permanent public space — protecting your identity protects you.
-              </p>
+              <p style={{fontSize:'12px',color:'#c88',margin:0,lineHeight:'1.6'}}>Your secret appears to contain personal information. For your safety, please remove it before sharing. This is a permanent public space.</p>
             </div>
           )}
           <div style={{marginTop:'16px'}}>
@@ -335,8 +394,15 @@ export default function Home() {
           <p style={{fontSize:'14px',color:'#666',marginBottom:'32px'}}>{T.lessAlone}</p>
           <div style={{background:'#111',border:'1px solid #333',padding:'24px',textAlign:'left'}}>
             <p style={{fontSize:'14px',color:'#888',marginBottom:'16px',fontStyle:'italic'}}>{T.sayMore}</p>
-            <textarea value={followupAnswer} onChange={e=>setFollowupAnswer(e.target.value)} placeholder={T.morePlaceholder} rows={4} style={{width:'100%',background:'#0a0a0a',color:'#e8e8e8',border:'1px solid #222',padding:'12px',fontSize:'14px',lineHeight:'1.7',resize:'none',fontFamily:'Georgia,serif',boxSizing:'border-box'}} />
-            <div style={{display:'flex',gap:'12px',marginTop:'12px'}}>
+            <textarea
+              value={followupAnswer}
+              onChange={e=>setFollowupAnswer(e.target.value.slice(0,300))}
+              placeholder={T.morePlaceholder}
+              rows={4}
+              style={{width:'100%',background:'#0a0a0a',color:'#e8e8e8',border:'1px solid #222',padding:'12px',fontSize:'14px',lineHeight:'1.7',resize:'none',fontFamily:'Georgia,serif',boxSizing:'border-box'}}
+            />
+            <p style={{fontSize:'10px',color:'#333',marginTop:'4px',textAlign:'right'}}>{followupAnswer.length}/300</p>
+            <div style={{display:'flex',gap:'12px',marginTop:'8px'}}>
               <button onClick={()=>setFollowupDone(true)} style={{flex:1,background:'none',border:'1px solid #333',color:'#666',padding:'10px',cursor:'pointer',fontSize:'12px',letterSpacing:'1px'}}>{T.noDone}</button>
               <button onClick={()=>setFollowupDone(true)} disabled={followupAnswer.length<2} style={{flex:2,background: followupAnswer.length>=2?'#c8b8a2':'#111',color: followupAnswer.length>=2?'#0a0a0a':'#333',border:'none',padding:'10px',cursor:'pointer',fontSize:'12px',letterSpacing:'2px',transition:'all 0.3s'}}>{T.releaseThis}</button>
             </div>
