@@ -10,8 +10,8 @@ function generateIcon(size) {
   ctx.fillRect(0, 0, size, size);
 
   // Warm glow
-  const glow = ctx.createRadialGradient(size*0.5, size*0.55, 0, size*0.5, size*0.55, size*0.45);
-  glow.addColorStop(0, 'rgba(200,140,80,0.2)');
+  const glow = ctx.createRadialGradient(size*0.5, size*0.5, 0, size*0.5, size*0.5, size*0.45);
+  glow.addColorStop(0, 'rgba(180,100,100,0.25)');
   glow.addColorStop(1, 'rgba(0,0,0,0)');
   ctx.fillStyle = glow;
   ctx.fillRect(0, 0, size, size);
@@ -19,55 +19,69 @@ function generateIcon(size) {
   const cx = size * 0.5;
   const cy = size * 0.54;
 
-  // Lips
-  ctx.fillStyle = '#c8b8a2';
+  // Lower lip
+  ctx.fillStyle = '#c8606a';
+  ctx.beginPath();
+  ctx.moveTo(cx - size*0.24, cy + size*0.01);
+  ctx.quadraticCurveTo(cx, cy + size*0.18, cx + size*0.24, cy + size*0.01);
+  ctx.quadraticCurveTo(cx, cy + size*0.22, cx - size*0.24, cy + size*0.01);
+  ctx.closePath();
+  ctx.fill();
 
   // Upper lip
+  ctx.fillStyle = '#b84e58';
   ctx.beginPath();
-  ctx.moveTo(cx - size*0.22, cy);
-  ctx.quadraticCurveTo(cx - size*0.1, cy - size*0.08, cx, cy - size*0.02);
-  ctx.quadraticCurveTo(cx + size*0.1, cy - size*0.08, cx + size*0.22, cy);
-  ctx.quadraticCurveTo(cx + size*0.14, cy + size*0.12, cx, cy + size*0.14);
-  ctx.quadraticCurveTo(cx - size*0.14, cy + size*0.12, cx - size*0.22, cy);
+  ctx.moveTo(cx - size*0.24, cy);
+  ctx.quadraticCurveTo(cx - size*0.1, cy - size*0.1, cx, cy - size*0.03);
+  ctx.quadraticCurveTo(cx + size*0.1, cy - size*0.1, cx + size*0.24, cy);
+  ctx.quadraticCurveTo(cx, cy + size*0.04, cx - size*0.24, cy);
   ctx.closePath();
   ctx.fill();
 
-  // Cupid's bow detail
-  ctx.fillStyle = '#a09080';
+  // Lip gloss highlight on lower lip
+  const gloss = ctx.createRadialGradient(cx, cy + size*0.1, 0, cx, cy + size*0.1, size*0.12);
+  gloss.addColorStop(0, 'rgba(255,200,200,0.5)');
+  gloss.addColorStop(1, 'rgba(255,150,150,0)');
+  ctx.fillStyle = gloss;
   ctx.beginPath();
-  ctx.moveTo(cx - size*0.22, cy);
-  ctx.quadraticCurveTo(cx - size*0.1, cy - size*0.08, cx, cy - size*0.02);
-  ctx.quadraticCurveTo(cx + size*0.1, cy - size*0.08, cx + size*0.22, cy);
-  ctx.lineTo(cx + size*0.22, cy + size*0.01);
-  ctx.quadraticCurveTo(cx + size*0.1, cy - size*0.07, cx, cy - size*0.01);
-  ctx.quadraticCurveTo(cx - size*0.1, cy - size*0.07, cx - size*0.22, cy + size*0.01);
-  ctx.closePath();
+  ctx.ellipse(cx, cy + size*0.1, size*0.1, size*0.05, 0, 0, Math.PI*2);
   ctx.fill();
 
-  // Finger pressing against lips
-  const fx = cx + size*0.04;
-  const fy = size*0.18;
-  const fw = size*0.085;
+  // Horizontal finger across lips
+  const fy = cy - size*0.01;
+  const fh = size*0.09;
 
-  // Finger body
-  ctx.fillStyle = '#c8b8a2';
+  // Finger body — horizontal rounded rectangle
+  ctx.fillStyle = '#d4b896';
   ctx.beginPath();
-  ctx.roundRect(fx - fw/2, fy, fw, size*0.32, fw/2);
+  ctx.roundRect(cx - size*0.34, fy - fh/2, size*0.68, fh, fh/2);
   ctx.fill();
 
-  // Finger tip highlight
-  const tipGlow = ctx.createRadialGradient(fx, fy + size*0.04, 0, fx, fy + size*0.04, fw*0.8);
-  tipGlow.addColorStop(0, 'rgba(220,200,170,0.6)');
-  tipGlow.addColorStop(1, 'rgba(0,0,0,0)');
-  ctx.fillStyle = tipGlow;
+  // Finger knuckle lines
+  ctx.strokeStyle = 'rgba(180,140,100,0.5)';
+  ctx.lineWidth = size*0.008;
   ctx.beginPath();
-  ctx.arc(fx, fy + size*0.04, fw*0.8, 0, Math.PI*2);
+  ctx.moveTo(cx - size*0.08, fy - fh*0.3);
+  ctx.lineTo(cx - size*0.08, fy + fh*0.3);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(cx + size*0.08, fy - fh*0.3);
+  ctx.lineTo(cx + size*0.08, fy + fh*0.3);
+  ctx.stroke();
+
+  // Fingernail on right tip
+  ctx.fillStyle = '#e8d0b8';
+  ctx.beginPath();
+  ctx.roundRect(cx + size*0.22, fy - fh*0.32, size*0.09, fh*0.64, size*0.02);
   ctx.fill();
 
-  // Fingernail
-  ctx.fillStyle = '#e8d8c0';
+  // Nail gloss
+  const nailGloss = ctx.createLinearGradient(cx+size*0.22, fy-fh*0.32, cx+size*0.22, fy);
+  nailGloss.addColorStop(0, 'rgba(255,255,255,0.4)');
+  nailGloss.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = nailGloss;
   ctx.beginPath();
-  ctx.roundRect(fx - fw*0.35, fy + size*0.01, fw*0.7, size*0.06, fw*0.2);
+  ctx.roundRect(cx + size*0.22, fy - fh*0.32, size*0.09, fh*0.32, size*0.02);
   ctx.fill();
 
   return canvas.toBuffer('image/png');
