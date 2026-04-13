@@ -1,0 +1,4 @@
+#Sun Apr 12 21:55:51 UTC 2026
+base.0=/workspaces/secret-box/app/build/intermediates/dex/release/minifyReleaseWithR8/classes.dex
+renamed.0=classes.dex
+path.0=classes.dex

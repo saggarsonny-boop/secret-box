@@ -36,7 +36,7 @@ export default function Home() {
   const [secretOfDay, setSecretOfDay] = useState<Secret|null>(null);
   const [content, setContent] = useState('');
   const [category, setCategory] = useState('');
-  const [filter, setFilter] = useState('hollow');
+  const [filter, setFilter] = useState('all');
   const [lang, setLang] = useState<Lang>('en');
   const [view, setView] = useState<'feed'|'submit'|'followup'>('feed');
   const [loading, setLoading] = useState(false);
