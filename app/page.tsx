@@ -3,6 +3,7 @@ import { useEffect, useState, useRef, useCallback } from 'react';
 import { t, Lang } from '@/lib/translations';
 import AutoDemo from '@/components/AutoDemo'
 import FirstVisitCard from '@/components/FirstVisitCard'
+import TooltipTour from '@/components/TooltipTour'
 
 type Secret = { id: number; content: string; category: string; resonance: number; created_at: string; ai_response?: string; image_url?: string };
 type Comment = { id: number; secret_id: number; content: string; created_at: string };
