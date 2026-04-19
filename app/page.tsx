@@ -1,6 +1,8 @@
 'use client';
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { t, Lang } from '@/lib/translations';
+import AutoDemo from '@/components/AutoDemo'
+import FirstVisitCard from '@/components/FirstVisitCard'
 
 type Secret = { id: number; content: string; category: string; resonance: number; created_at: string; ai_response?: string; image_url?: string };
 type Comment = { id: number; secret_id: number; content: string; created_at: string };
@@ -331,6 +333,9 @@ export default function Home() {
   );
 
   return (
+    <>
+    <AutoDemo />
+    <FirstVisitCard />
     <main style={{background:bg,minHeight:'100vh',color:'#e8e8e8',fontFamily:'Georgia,serif',maxWidth:'600px',margin:'0 auto',padding:'24px 16px',transition:'background 1s'}}>
 
       {sharePreview && (
@@ -481,5 +486,6 @@ export default function Home() {
         </div>
       )}
     </main>
+    </>
   );
 }
