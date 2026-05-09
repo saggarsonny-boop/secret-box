@@ -6,6 +6,7 @@ import { checkAndIncrement } from '@/lib/rate-limit';
 import { isOverCap, recordSpend, estimateAnthropicCents } from '@/lib/cost-cap';
 import { ipFromHeaders } from '@/lib/geo';
 import { getTier } from '@/lib/tier';
+import { assertNoIdentity } from '@/lib/safety';
 
 async function moderateComment(content: string): Promise<{safe: boolean; reason: string}> {
   if (await isOverCap('anthropic')) return { safe: true, reason: '' };
@@ -45,8 +46,13 @@ export async function GET(req: Request) {
     const secret_id = searchParams.get('secret_id');
     if (!secret_id) return NextResponse.json([]);
     const sql = getDb();
-    const comments = await sql`SELECT * FROM comments WHERE secret_id = ${secret_id} ORDER BY created_at ASC`;
-    return NextResponse.json(comments);
+    const comments = await sql`
+      SELECT id, secret_id, content, created_at
+        FROM comments
+        WHERE secret_id = ${secret_id}
+        ORDER BY created_at ASC
+    `;
+    return NextResponse.json(assertNoIdentity(comments));
   } catch {
     return NextResponse.json([]);
   }
@@ -77,8 +83,12 @@ export async function POST(req: Request) {
     if (!safe) return NextResponse.json({ error: reason }, { status: 400 });
 
     const sql = getDb();
-    const result = await sql`INSERT INTO comments (secret_id, content) VALUES (${secret_id}, ${content}) RETURNING *`;
-    return NextResponse.json(result[0]);
+    const result = await sql`
+      INSERT INTO comments (secret_id, content)
+      VALUES (${secret_id}, ${content})
+      RETURNING id, secret_id, content, created_at
+    `;
+    return NextResponse.json(assertNoIdentity(result[0]));
   } catch {
     return NextResponse.json({ error: 'Failed' }, { status: 500 });
   }

@@ -1,6 +1,7 @@
 import { getDb } from '@/lib/db';
 import { NextResponse } from 'next/server';
 import { getSessionTokenIfPresent } from '@/lib/session';
+import { assertNoIdentity } from '@/lib/safety';
 
 // GET /api/secrets-pending  — returns this session's queued (time-released)
 // secrets. Empty list when there's no session cookie.
@@ -20,7 +21,7 @@ export async function GET() {
         AND published_at IS NULL
       ORDER BY scheduled_release_at ASC
   `;
-  return NextResponse.json(rows);
+  return NextResponse.json(assertNoIdentity(rows));
 }
 
 export async function DELETE(req: Request) {
