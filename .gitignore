@@ -1,1 +1,12 @@
 node_modules
+*.keystore
+*.jks
+*.aab
+*.apk
+*.idsig
+.env
+.env.local
+.env*.local
+.next
+.DS_Store
+/app/build/

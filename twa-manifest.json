@@ -16,7 +16,7 @@
   "iconUrl": "https://secret-box-vert.vercel.app/icons/icon-512.png",
   "splashScreenFadeOutDuration": 300,
   "signingKey": {
-    "path": "/workspaces/secret-box/android.keystore",
+    "path": "../.keystores/secret-box/android.keystore",
     "alias": "android"
   },
   "appVersionName": "1",
