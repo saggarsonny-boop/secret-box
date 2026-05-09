@@ -1,7 +1,8 @@
 'use client';
 import { useEffect, useState, useRef, useCallback } from 'react';
 import Script from 'next/script';
-import { t, Lang } from '@/lib/translations';
+import { t, type Lang } from '@/lib/translations';
+import { getDefaultLang } from '@/lib/strings';
 import AutoDemo from '@/components/AutoDemo';
 import FirstVisitCard from '@/components/FirstVisitCard';
 import TooltipTour from '@/components/TooltipTour';
@@ -26,6 +27,17 @@ type Comment = { id: number; secret_id: number; content: string; created_at: str
 type Pending = { id: number; content: string; category: string; scheduled_release_at: string; created_at: string };
 
 const MOODS = ['hollow','anxious','hopeful','numb','ashamed','seen','grief','love','lonely','angry','lost','grateful','trapped','invisible','broken','healing'];
+
+const ROTATING_PLACEHOLDERS = [
+  "the thing you've never told anyone…",
+  "the version of you no one's met…",
+  "what kept you awake last night…",
+  "the apology you can't deliver…",
+  "the want you don't say out loud…",
+  "the relief you feel guilty about…",
+  "the love you didn't return…",
+  "the fear you carry quietly…",
+];
 const FILTERS = [...MOODS, 'all'];
 const LANGS: { code: Lang; label: string }[] = [
   { code: 'en', label: 'EN' },
@@ -98,6 +110,7 @@ export default function Home() {
   const [category, setCategory] = useState('');
   const [filter, setFilter] = useState('all');
   const [lang, setLang] = useState<Lang>('en');
+  const [placeholderIdx, setPlaceholderIdx] = useState(0);
   const [view, setView] = useState<'feed'|'submit'|'followup'>('feed');
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -144,6 +157,7 @@ export default function Home() {
   const dim = nightMode ? '#1a1020' : '#1a1a1a';
 
   useEffect(() => {
+    setLang(getDefaultLang());
     setMeTooed(loadMeTooSet());
     fetch('/api/secrets').then(r=>r.json()).then(data => {
       setSecrets(data);
@@ -153,6 +167,12 @@ export default function Home() {
     fetch('/api/secretofday').then(r=>r.json()).then(setSecretOfDay).catch(()=>{});
     fetch('/api/secrets-pending').then(r=>r.json()).then(d => Array.isArray(d) && setPending(d)).catch(()=>{});
   }, []);
+
+  useEffect(() => {
+    if (view !== 'submit' || content.length > 0) return;
+    const iv = setInterval(() => setPlaceholderIdx(i => (i + 1) % 8), 5000);
+    return () => clearInterval(iv);
+  }, [view, content.length]);
 
   useEffect(() => {
     const interval = setInterval(async () => {
@@ -607,7 +627,7 @@ export default function Home() {
             ))}
           </div>
           <div style={{position:'relative'}}>
-            <textarea value={content} onChange={e=>{ setContent(e.target.value.slice(0,500)); checkPersonalInfo(e.target.value); }} onKeyDown={handleKeyDown} placeholder={T.placeholder} rows={6} style={{width:'100%',background:'#111',color:'#e8e8e8',border:`1px solid ${personalInfoWarning?'#c44':'#333'}`,padding:'16px',fontSize:'15px',lineHeight:'1.7',resize:'vertical',fontFamily:'Georgia,serif',boxSizing:'border-box'}} />
+            <textarea value={content} onChange={e=>{ setContent(e.target.value.slice(0,500)); checkPersonalInfo(e.target.value); }} onKeyDown={handleKeyDown} placeholder={ROTATING_PLACEHOLDERS[placeholderIdx] || T.placeholder} rows={6} style={{width:'100%',background:'#111',color:'#e8e8e8',border:`1px solid ${personalInfoWarning?'#c44':'#333'}`,padding:'16px',fontSize:'15px',lineHeight:'1.7',resize:'vertical',fontFamily:'Georgia,serif',boxSizing:'border-box'}} />
             <div style={{display:'flex',justifyContent:'space-between',marginTop:'4px'}}>
               <span style={{fontSize:'11px',color: content.length > 400 ? accent : '#333'}}>{content.length}/500</span>
               {content.length > 0 && <span style={{fontSize:'11px',color:'#333'}}>Ctrl+Enter to send</span>}

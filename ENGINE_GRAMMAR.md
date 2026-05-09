@@ -1,11 +1,14 @@
 ---
 engine: HiveSecretBox
-id: secret-box
-domain: secretbox.hive.baby
+id: hivesecretbox
+domain: hivesecretbox.hive.baby
+domain_aliases:
+  - secretbox.hive.baby
+  - secret-box.hive.baby
 repo: saggarsonny-boop/secret-box
 owner: saggarsonny-boop
 
-version: 2.0.0
+version: 2.1.0
 status: live
 tier: 1
 schema: anonymous-confession
@@ -48,32 +51,45 @@ onboarding_stack:
   tooltip_tour: implemented
   install_hint: implemented
   first_visit_explainer: implemented
-  rotating_placeholders: pending
+  rotating_placeholders: implemented
 
 vercel_project: secret-box
 deployment_protection: off
 
 visibility: public
 commercial_surface: freemium
+
+# viral_loop_targets values constrained to the canonical V24 enum
+# {referral, share_card, embed, pr_pickup, community_post}. The
+# engine-specific viral mechanics (recognition button, AI imagery,
+# city-blurred location, curated daily drop, time-released posting)
+# all surface as either share-card content or community-post rituals;
+# referral / embed / pr_pickup loops are not used.
 viral_loop_targets:
-  - recognition_button
-  - ai_imagery
-  - location_intimacy
-  - daily_drop_ritual
-  - time_release_cooldown
+  - share_card
+  - community_post
 
 production_state: listed
-last_audit_at: 2026-05-08
+last_audit_at: 2026-05-09
 
+# launch_checklist_state — canonical 8 booleans per V19. Cross-references:
+#   - test_slot               docs/engine-archives/secret-box/test-station-slot.md (in hivebaby PR)
+#   - seo_layout              app/layout.tsx (Metadata + Viewport + OG + manifest + appleWebApp)
+#   - tooltip_tour            components/TooltipTour.tsx
+#   - planet_or_udnav         hivebaby engines.json entry (in hivebaby PR)
+#   - env_vars_confirmed      Vercel project secret-box (DB + Anthropic + Cloudinary set; Replicate/Turnstile optional)
+#   - health_check            app/api/health/route.ts
+#   - health_workflow_listed  .github/workflows/secret-box-health.yml
+#   - engine_count_updated    hivebaby/CLAUDE.md §D row updated to PASS (in hivebaby PR)
 launch_checklist_state:
-  domain_live: true
-  manifest_present: true
-  favicon_set: true
-  hive_logo_present: true
-  hive_footer_present: true
-  health_endpoint_live: true
-  planet_entry_present: true
-  locales_present: true
+  test_slot: true
+  seo_layout: true
+  tooltip_tour: true
+  planet_or_udnav: true
+  env_vars_confirmed: true
+  health_check: true
+  health_workflow_listed: true
+  engine_count_updated: true
 
 rate_limits:
   secrets:
@@ -144,15 +160,3 @@ HiveSecretBox is the anonymous-confession engine of the Hive ecosystem. People s
   - `secret-box-health.yml` — every 6h, pings `/api/health`.
   - All require GitHub Actions secrets `CRON_SECRET` and `ENGINE_URL`.
 
-## Hive-Ops Overrides
-
-```yaml
-overrides:
-  - rule: H08
-    mode: warn
-    reason: "OG image is a placeholder copy of icon-512.png until a designed og.png lands; tracked separately."
-    issue: https://github.com/saggarsonny-boop/secret-box/issues/1
-    reviewer: Sonny
-    date: 2026-05-08
-    warn_until: 2026-06-07
-```
