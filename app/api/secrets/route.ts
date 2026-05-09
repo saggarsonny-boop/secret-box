@@ -8,6 +8,7 @@ import { cityFromHeaders, ipFromHeaders } from '@/lib/geo';
 import { getTier } from '@/lib/tier';
 import { assertNoIdentity } from '@/lib/safety';
 import { classifyTheme } from '@/lib/theme';
+import { govern } from '@/lib/governance';
 
 function containsPersonalInfo(text: string): boolean {
   const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/;
@@ -110,21 +111,37 @@ export async function POST(req: Request) {
 
     const theme = await classifyTheme(content);
 
+    // Queen Bee — validate the structured output before storage.
+    // Schema = secret-response (registry); required fields {received, resonance}.
+    const verdict = await govern({
+      input: content,
+      content: { received: true, resonance: 0 },
+      context: { tier, locale: req.headers.get('accept-language') ?? undefined, sessionId: token },
+    });
+    if (!verdict.approved) {
+      return NextResponse.json({ error: 'governance_rejected', failureCode: verdict.failureCode }, { status: 422 });
+    }
+    const stamp = verdict.stamp;
+
     const sql = getDb();
     const result = await sql`
       INSERT INTO secrets (
         content, category, resonance, ai_response, image_url,
-        me_too_count, city, scheduled_release_at, published_at, session_token, theme
+        me_too_count, city, scheduled_release_at, published_at, session_token, theme,
+        governance_stamp
       )
       VALUES (
         ${content}, ${category || 'general'}, 0, ${ai_response}, ${image_url || null},
-        0, ${city}, ${scheduledRelease}, ${publishedAt}, ${token}, ${theme}
+        0, ${city}, ${scheduledRelease}, ${publishedAt}, ${token}, ${theme},
+        ${JSON.stringify(stamp)}::jsonb
       )
       RETURNING id, content, category, resonance, me_too_count,
                 ai_response, image_url, ai_image_url, ai_image_generated_at,
-                city, scheduled_release_at, published_at, theme, created_at
+                city, scheduled_release_at, published_at, theme, created_at,
+                governance_stamp
     `;
-    return NextResponse.json(assertNoIdentity(result[0]));
+    const row = result[0] as Record<string, unknown>;
+    return NextResponse.json({ ...assertNoIdentity(row), _governance: stamp });
   } catch {
     return NextResponse.json({ error: 'Failed' }, { status: 500 });
   }

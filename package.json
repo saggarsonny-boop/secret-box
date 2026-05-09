@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "@neondatabase/serverless": "^0.10.4",
+    "@queen-bee/client": "github:saggarsonny-boop/queen-bee#main",
     "@vercel/analytics": "^2.0.1",
     "canvas": "^3.2.3",
     "cloudinary": "^2.9.0",

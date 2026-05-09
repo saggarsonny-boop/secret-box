@@ -17,7 +17,7 @@ premium: true
 cost_profile: low_marginal
 engine_class: nextjs
 
-governance: QueenBee.MasterGrappler@pending
+governance: QueenBee.MasterGrappler@v0
 safety: enabled
 multilingual: enabled
 tone: gentle, anonymous, non-judgmental
@@ -42,6 +42,28 @@ env_vars_optional:
   - TURNSTILE_SECRET_KEY
   - NEXT_PUBLIC_TURNSTILE_SITE_KEY
   - PLUS_AUTH_SECRET
+  - QUEEN_BEE_URL
+  - QB_ENGINE_TOKEN
+
+# Queen Bee runtime governance — secret-box is the FIRST Hive engine to
+# wire QB consumption in production (canonical worked example in
+# WIRING_QUEEN_BEE.md). HivePlainScan remains "planned-not-yet-wired"
+# until its radiology-report-explanation schema lands in
+# queen-bee/lib/schemas.ts.
+queen_bee_schemas:
+  - secret-response
+queen_bee_consumption:
+  schemas:
+    - secret-response
+  endpoint: /api/govern
+  status: wired
+  client_version: in-repo-0.1.0
+  fail_policy: fail-degraded
+  routes_wired:
+    - POST /api/secrets
+    - POST /api/comments
+    - GET /api/daily
+    - POST /api/ai-image
 
 health_check: /api/health
 
@@ -135,6 +157,34 @@ HiveSecretBox is the anonymous-confession engine of the Hive ecosystem. People s
 - **Recognition over reaction.** "Me too" is the canonical interaction. Resonance count remains for backwards compatibility but the UX leads with recognition.
 - **Diversity in the daily drop.** No single mood dominates the curated 5; the cron caps at 1 per category before topping up.
 - **Gentle geography.** City strings only, never IP. Default ON but easy to opt out before submit.
+
+## Governance
+
+This engine consumes Queen Bee at `queenbee.hive.baby/api/govern` via
+`lib/queen-bee-client.ts` (in-repo minimal client; canonical SDK at
+`@queen-bee/client` was not installable when this PR shipped — see
+WIRING_QUEEN_BEE.md step 2 for the swap-in path). Every response from
+the four wired routes
+is validated against the `secret-response` schema and stamped before
+reaching the client surface. **HiveSecretBox is the first Hive engine
+to consume Queen Bee in production** — see `WIRING_QUEEN_BEE.md` for
+the canonical worked example.
+
+- Registry entry: `queen-bee/lib/registry.ts` → `secretbox`
+- Schema: `secret-response` (required fields: `received`, `resonance`)
+- Safety tier: `elevated`
+- Unavailability policy: **fail-degraded** — when QB is unreachable,
+  responses are surfaced with `governance_stamp.governed = false` and
+  `flags: ['qb_unavailable']` rather than blocking. Rationale: content
+  has already passed three upstream sanitizers (`containsPersonalInfo`,
+  `moderateComment`, `moderateImage`); QB is defense-in-depth, not the
+  only gate. Outages must not silently break an anonymous outlet.
+- Transport-failure alerting: not wired in v2.2 (no `hive_alerts`
+  emitter in this engine yet); wire when the substrate ships.
+- Routes wired: `POST /api/secrets`, `POST /api/comments`,
+  `GET /api/daily`, `POST /api/ai-image`. Other routes
+  (`POST /api/me-too`, `POST /api/resonate`, `GET /api/secrets-pending`)
+  return cached or counter-only state and don't go through QB.
 
 ## Safety Templates
 - AI compassion replies: 2–3 sentences max, no advice, same language as the secret.

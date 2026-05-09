@@ -7,6 +7,7 @@ import { isOverCap, recordSpend, estimateAnthropicCents } from '@/lib/cost-cap';
 import { ipFromHeaders } from '@/lib/geo';
 import { getTier } from '@/lib/tier';
 import { assertNoIdentity } from '@/lib/safety';
+import { govern } from '@/lib/governance';
 
 async function moderateComment(content: string): Promise<{safe: boolean; reason: string}> {
   if (await isOverCap('anthropic')) return { safe: true, reason: '' };
@@ -82,13 +83,28 @@ export async function POST(req: Request) {
     const { safe, reason } = await moderateComment(content);
     if (!safe) return NextResponse.json({ error: reason }, { status: 400 });
 
+    // Queen Bee — single-engine registry maps secretbox → secret-response,
+    // so comments use the same {received, resonance} envelope. The
+    // received field signals "this comment was accepted upstream"; the
+    // resonance field is 0 because comments don't carry a resonance count.
+    const verdict = await govern({
+      input: content,
+      content: { received: true, resonance: 0 },
+      context: { tier, locale: req.headers.get('accept-language') ?? undefined, sessionId: token },
+    });
+    if (!verdict.approved) {
+      return NextResponse.json({ error: 'governance_rejected', failureCode: verdict.failureCode }, { status: 422 });
+    }
+    const stamp = verdict.stamp;
+
     const sql = getDb();
     const result = await sql`
-      INSERT INTO comments (secret_id, content)
-      VALUES (${secret_id}, ${content})
-      RETURNING id, secret_id, content, created_at
+      INSERT INTO comments (secret_id, content, governance_stamp)
+      VALUES (${secret_id}, ${content}, ${JSON.stringify(stamp)}::jsonb)
+      RETURNING id, secret_id, content, created_at, governance_stamp
     `;
-    return NextResponse.json(assertNoIdentity(result[0]));
+    const row = result[0] as Record<string, unknown>;
+    return NextResponse.json({ ...assertNoIdentity(row), _governance: stamp });
   } catch {
     return NextResponse.json({ error: 'Failed' }, { status: 500 });
   }

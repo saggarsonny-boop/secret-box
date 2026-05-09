@@ -4,6 +4,7 @@ import { getOrCreateSessionToken } from '@/lib/session';
 import { checkAndIncrement } from '@/lib/rate-limit';
 import { getTier } from '@/lib/tier';
 import { generateSecretImage, moodToImagePrompt } from '@/lib/replicate';
+import { govern } from '@/lib/governance';
 
 // POST /api/ai-image  body: { id }
 // Generates a Replicate FLUX schnell image for the given secret if it
@@ -39,8 +40,23 @@ export async function POST(req: Request) {
     const url = await generateSecretImage(prompt);
     if (!url) return NextResponse.json({ error: 'generation_failed' }, { status: 502 });
 
+    // Queen Bee — validate the AI-generated artifact before persisting.
+    // QB inspects content for safety (no PII / no graphic patterns) and
+    // stamps the row. Same engine schema (secret-response) — `received`
+    // flips true once the URL is in our hand; `resonance` is 0 (the
+    // image hasn't accrued any me-too taps yet).
+    const verdict = await govern({
+      input: prompt,
+      content: { received: true, resonance: 0 },
+      context: { tier, sessionId: token },
+    });
+    if (!verdict.approved) {
+      return NextResponse.json({ error: 'governance_rejected', failureCode: verdict.failureCode }, { status: 422 });
+    }
+    const stamp = verdict.stamp;
+
     await sql`UPDATE secrets SET ai_image_url = ${url}, ai_image_generated_at = NOW() WHERE id = ${id}`;
-    return NextResponse.json({ ai_image_url: url });
+    return NextResponse.json({ ai_image_url: url, _governance: stamp });
   } catch {
     return NextResponse.json({ error: 'failed' }, { status: 500 });
   }
