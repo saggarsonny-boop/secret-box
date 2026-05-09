@@ -8,6 +8,7 @@ import FirstVisitCard from '@/components/FirstVisitCard';
 import TooltipTour from '@/components/TooltipTour';
 import HiveInstallHint from '@/components/HiveInstallHint';
 import HiveFirstVisitExplainer, { dismissFirstVisit } from '@/components/HiveFirstVisitExplainer';
+import { useSound } from '@/lib/useSound';
 
 type Secret = {
   id: number;
@@ -141,6 +142,8 @@ export default function Home() {
   const [shareCity, setShareCity] = useState(true);
   const [schedule, setSchedule] = useState<'now'|'24h'|'7d'>('24h');
   const [pending, setPending] = useState<Pending[]>([]);
+  const [similar, setSimilar] = useState<Secret[]>([]);
+  const sound = useSound();
   const [submitError, setSubmitError] = useState<string|null>(null);
   const [nightMode] = useState(is3AM());
   const lastFetchTime = useRef(Date.now());
@@ -266,6 +269,7 @@ export default function Home() {
         : data.error;
       setCommentError(prev => ({...prev, [secret_id]: msg}));
     } else {
+      sound.play('reply');
       setComments(prev => ({...prev, [secret_id]: [...(prev[secret_id]||[]), data]}));
       setCommentInput(prev => ({...prev, [secret_id]: ''}));
     }
@@ -332,8 +336,18 @@ export default function Home() {
     setSubmitted(true);
     setView('followup');
     dismissFirstVisit();
+    sound.play('submit');
     if (data.id && schedule === 'now') {
       fetch('/api/ai-image', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ id: data.id }) }).catch(()=>{});
+      // Recognition by similarity — wait briefly for the theme classification
+      // to land in the row, then fetch matches. The /api/similar endpoint
+      // returns [] gracefully when the theme hasn't been written yet.
+      setSimilar([]);
+      setTimeout(() => {
+        fetch(`/api/similar?secret_id=${data.id}`).then(r => r.json()).then(rows => {
+          if (Array.isArray(rows)) setSimilar(rows);
+        }).catch(()=>{});
+      }, 1200);
     }
     if (data.id && schedule !== 'now') {
       setPending(p => [...p, { id: data.id, content: data.content, category: data.category, scheduled_release_at: data.scheduled_release_at, created_at: data.created_at }]);
@@ -348,6 +362,7 @@ export default function Home() {
 
   async function handleMeToo(id: number) {
     if (meTooed.has(id)) return;
+    sound.play('me_too');
     setPulsing(id); setTimeout(() => setPulsing(null), 600);
     const next = new Set(meTooed); next.add(id); setMeTooed(next); saveMeTooSet(next);
     let nextCount = 1;
@@ -610,6 +625,14 @@ export default function Home() {
               <button onClick={()=>window.open('https://buy.stripe.com/7sYcN79YHe7v53AcHD0RG01','_blank')} style={{background:'transparent',border:'1px solid #2a2a2a',color:'#444',padding:'8px 16px',fontSize:'11px',letterSpacing:'1px',cursor:'pointer'}}>$19 / yr</button>
               <button onClick={()=>window.open('https://buy.stripe.com/9B6aEZ7Qzd3rcw2bDz0RG02','_blank')} style={{background:'transparent',border:'1px solid #2a2a2a',color:'#444',padding:'8px 16px',fontSize:'11px',letterSpacing:'1px',cursor:'pointer'}}>$5 once</button>
             </div>
+            <div style={{ marginTop: 24, display: 'flex', gap: 12, justifyContent: 'center', alignItems: 'center', flexWrap: 'wrap' }}>
+              <button onClick={() => sound.setEnabled(!sound.enabled)} style={{ background: 'transparent', border: '1px solid #222', color: sound.enabled ? accent : '#444', padding: '6px 14px', fontSize: 11, letterSpacing: 1, cursor: 'pointer' }}>
+                {sound.enabled ? '♪ SOUND ON' : '♪ SOUND OFF'}
+              </button>
+              <a href={`/art/${new Date().toISOString().slice(0, 7)}`} style={{ color: '#666', fontSize: 11, letterSpacing: 1, textDecoration: 'none', border: '1px solid #222', padding: '6px 14px' }}>
+                ✦ THIS MONTH&apos;S ART
+              </a>
+            </div>
           </div>
         </div>
       )}
@@ -696,6 +719,21 @@ export default function Home() {
               : schedule === '24h' ? 'your secret will release in 24 hours. you can cancel anytime from the feed.'
               : 'your secret will release in 7 days. you can cancel anytime from the feed.'}
           </p>
+
+          {similar.length > 0 && (
+            <div style={{ background:'#0c0c0c', border:`1px solid ${accent}`, padding:'18px', marginBottom:'24px', textAlign:'left' }}>
+              <p style={{ fontSize:11, color:accent, letterSpacing:2, margin:'0 0 6px 0' }}>✦ OTHERS HAVE WRITTEN ABOUT THIS TOO</p>
+              <p style={{ fontSize:12, color:'#888', margin:'0 0 14px 0', fontStyle:'italic' }}>you are not alone in feeling this.</p>
+              {similar.map(s => (
+                <div key={s.id} style={{ borderTop:'1px solid #1a1a1a', paddingTop:12, marginTop:12 }}>
+                  <p style={{ fontSize:11, color:'#444', letterSpacing:2, margin:'0 0 6px 0' }}>{s.category.toUpperCase()}{(s.me_too_count || 0) > 0 ? ` · ${s.me_too_count} ME TOO` : ''}</p>
+                  <p style={{ fontSize:14, color:'#bbb', lineHeight:1.6, margin:0 }}>{s.content}</p>
+                  {s.city ? <p style={{ fontSize:11, color:'#555', margin:'6px 0 0 0', fontStyle:'italic' }}>someone in {s.city}</p> : null}
+                </div>
+              ))}
+            </div>
+          )}
+
           <div style={{background:'#111',border:'1px solid #333',padding:'24px',textAlign:'left'}}>
             <p style={{fontSize:'14px',color:'#888',marginBottom:'16px',fontStyle:'italic'}}>{T.sayMore}</p>
             <textarea value={followupAnswer} onChange={e=>setFollowupAnswer(e.target.value.slice(0,300))} placeholder={T.morePlaceholder} rows={4} style={{width:'100%',background:bg,color:'#e8e8e8',border:'1px solid #222',padding:'12px',fontSize:'14px',lineHeight:'1.7',resize:'none',fontFamily:'Georgia,serif',boxSizing:'border-box'}} />
