@@ -6,6 +6,7 @@ import { checkAndIncrement } from '@/lib/rate-limit';
 import { isOverCap, recordSpend, estimateAnthropicCents } from '@/lib/cost-cap';
 import { cityFromHeaders, ipFromHeaders } from '@/lib/geo';
 import { getTier } from '@/lib/tier';
+import { assertNoIdentity } from '@/lib/safety';
 
 function containsPersonalInfo(text: string): boolean {
   const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/;
@@ -51,12 +52,15 @@ export async function GET() {
   try {
     const sql = getDb();
     const secrets = await sql`
-      SELECT * FROM secrets
+      SELECT id, content, category, resonance, me_too_count,
+             ai_response, image_url, ai_image_url, ai_image_generated_at,
+             city, scheduled_release_at, published_at, created_at
+        FROM secrets
         WHERE published_at IS NOT NULL
         ORDER BY published_at DESC
         LIMIT 50
     `;
-    return NextResponse.json(secrets);
+    return NextResponse.json(assertNoIdentity(secrets));
   } catch {
     return NextResponse.json([], { status: 200 });
   }
@@ -113,9 +117,11 @@ export async function POST(req: Request) {
         ${content}, ${category || 'general'}, 0, ${ai_response}, ${image_url || null},
         0, ${city}, ${scheduledRelease}, ${publishedAt}, ${token}
       )
-      RETURNING *
+      RETURNING id, content, category, resonance, me_too_count,
+                ai_response, image_url, ai_image_url, ai_image_generated_at,
+                city, scheduled_release_at, published_at, created_at
     `;
-    return NextResponse.json(result[0]);
+    return NextResponse.json(assertNoIdentity(result[0]));
   } catch {
     return NextResponse.json({ error: 'Failed' }, { status: 500 });
   }
