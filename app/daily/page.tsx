@@ -1,4 +1,5 @@
 import { headers } from 'next/headers';
+import DailySoundCue from './DailySoundCue';
 
 type Secret = {
   id: number;
@@ -45,6 +46,7 @@ export default async function DailyPage({ searchParams }: { searchParams: Promis
 
   return (
     <main style={{ background: '#0a0a0a', minHeight: '100vh', color: '#e8e8e8', fontFamily: 'Georgia, serif', maxWidth: 600, margin: '0 auto', padding: '24px 16px' }}>
+      <DailySoundCue />
       <div style={{ textAlign: 'center', marginBottom: 32 }}>
         <p style={{ fontSize: 11, color: '#D4AF37', letterSpacing: 4, marginBottom: 8 }}>✦ DAILY DROP</p>
         <h1 style={{ fontSize: 26, fontWeight: 300, letterSpacing: 3, color: '#D4AF37', margin: 0 }}>five secrets, once a day</h1>
