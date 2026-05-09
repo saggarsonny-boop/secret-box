@@ -29,6 +29,14 @@ export type { GovernanceStamp };
 
 export const ENGINE_ID = 'secretbox';
 
+// QB registry maps secretbox to safety: 'elevated', which (per
+// queen-bee/lib/safety.ts DISCLAIMERS map) requires this exact phrase
+// in every content payload. Without it, /api/govern rejects every
+// call with `missing_disclaimer:elevated` and submission breaks.
+// First-consumer lesson surfaced post-#12 — see secret-box#13 for
+// the production-broken story and queen-bee WIRING.md amendment.
+const ELEVATED_DISCLAIMER = 'This is not professional advice. Always seek qualified guidance.';
+
 // Fallback stamp produced when QB is unreachable. Same shape as a real
 // stamp so downstream consumers (DB column, response payload, audit
 // queries) don't need to special-case the unavailable path.
@@ -69,12 +77,17 @@ export async function govern(args: {
   content: Record<string, unknown>;
   context?: GovernRequestContext;
 }): Promise<Verdict> {
+  // Inject the elevated-tier disclaimer into every content payload
+  // before QB sees it. Single source of truth — routes pass their
+  // own content shape; the wrapper guarantees the disclaimer is
+  // always present.
+  const stampedContent = { ...args.content, disclaimer: ELEVATED_DISCLAIMER };
   let res: GovernResponse;
   try {
     res = await qbGovern({
       engineId: ENGINE_ID,
       input: args.input,
-      content: args.content,
+      content: stampedContent,
       context: args.context,
     });
   } catch (err) {
@@ -84,7 +97,7 @@ export async function govern(args: {
       return {
         approved: true,
         stamp: unavailableStamp(err.code),
-        content: args.content,
+        content: stampedContent,
       };
     }
     const e = err as Error;
@@ -92,7 +105,7 @@ export async function govern(args: {
     return {
       approved: true,
       stamp: unavailableStamp('unexpected_error'),
-      content: args.content,
+      content: stampedContent,
     };
   }
 
