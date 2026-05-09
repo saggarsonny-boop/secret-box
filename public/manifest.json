@@ -1,21 +1,17 @@
 {
-  "name": "The Secret Box",
-  "short_name": "Secret Box",
-  "description": "you are not alone",
+  "name": "HiveSecretBox",
+  "short_name": "SecretBox",
+  "description": "Anonymous secrets. No account. You are not alone.",
   "start_url": "/",
+  "scope": "/",
+  "id": "/",
   "display": "standalone",
-  "background_color": "#0a0a0a",
-  "theme_color": "#c8b8a2",
+  "orientation": "portrait",
+  "background_color": "#000000",
+  "theme_color": "#D4AF37",
   "icons": [
-    {
-      "src": "/icons/icon-192.png",
-      "sizes": "192x192",
-      "type": "image/png"
-    },
-    {
-      "src": "/icons/icon-512.png",
-      "sizes": "512x512",
-      "type": "image/png"
-    }
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/maskable-icon.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ]
 }

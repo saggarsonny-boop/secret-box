@@ -1,5 +1,9 @@
 import { NextResponse } from 'next/server';
 import { v2 as cloudinary } from 'cloudinary';
+import { getOrCreateSessionToken } from '@/lib/session';
+import { verifyTurnstile } from '@/lib/turnstile';
+import { isOverCap, recordSpend, estimateAnthropicCents } from '@/lib/cost-cap';
+import { ipFromHeaders } from '@/lib/geo';
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -8,6 +12,7 @@ cloudinary.config({
 });
 
 async function moderateImage(base64: string): Promise<{safe: boolean; reason: string}> {
+  if (await isOverCap('anthropic')) return { safe: true, reason: '' };
   try {
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -28,7 +33,10 @@ async function moderateImage(base64: string): Promise<{safe: boolean; reason: st
         }]
       })
     });
-    const data = await response.json();
+    const data = await response.json() as { content: { text: string }[]; usage?: { input_tokens: number; output_tokens: number } };
+    if (data.usage) {
+      await recordSpend(estimateAnthropicCents(data.usage.input_tokens, data.usage.output_tokens));
+    }
     const answer = data.content[0].text.trim().toUpperCase();
     if (answer === 'SAFE') return { safe: true, reason: '' };
     if (answer === 'FACES') return { safe: false, reason: 'faces' };
@@ -43,8 +51,15 @@ async function moderateImage(base64: string): Promise<{safe: boolean; reason: st
 
 export async function POST(req: Request) {
   try {
-    const { image } = await req.json();
+    const { image, turnstile_token } = await req.json() as { image?: string; turnstile_token?: string };
     if (!image) return NextResponse.json({ error: 'No image' }, { status: 400 });
+
+    const ip = ipFromHeaders(req.headers);
+    const ts = await verifyTurnstile(turnstile_token, ip);
+    if (!ts.ok) return NextResponse.json({ error: 'captcha_failed' }, { status: 400 });
+
+    await getOrCreateSessionToken();
+
     const base64 = image.split(',')[1];
     const { safe, reason } = await moderateImage(base64);
     if (!safe) {

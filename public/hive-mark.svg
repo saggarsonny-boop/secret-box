@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 86.6" role="img" aria-label="Hive">
+  <!--
+    Canonical Hive mark — flat-top regular hex with the same depth treatment
+    as the planet UI cells (rim gradient, inner radial face, top-edge
+    catchlight). Designed to be inlined at any size from 16px to 200px and
+    stay crisp. Geometry mirrors apps/parkback/app/_lib/HexButton.tsx
+    (HEX_OUTER + HEX_INNER constants).
+
+    Reuse: any Hive engine that needs the bare hex glyph (footer signature,
+    inline brand reference, etc.) should inline this SVG verbatim.
+  -->
+  <defs>
+    <linearGradient id="hive-rim" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FFE6A1" />
+      <stop offset="40%" stop-color="#D4AF37" />
+      <stop offset="100%" stop-color="#5e4a0d" />
+    </linearGradient>
+    <radialGradient id="hive-face" cx="32%" cy="28%" r="85%">
+      <stop offset="0%" stop-color="#FFD96E" />
+      <stop offset="55%" stop-color="#D4AF37" />
+      <stop offset="100%" stop-color="#a07f15" />
+    </radialGradient>
+    <linearGradient id="hive-catch" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="rgba(255,255,255,0.7)" />
+      <stop offset="60%" stop-color="rgba(255,255,255,0.15)" />
+      <stop offset="100%" stop-color="rgba(255,255,255,0)" />
+    </linearGradient>
+  </defs>
+  <polygon points="25,0 75,0 100,43.3 75,86.6 25,86.6 0,43.3"
+    fill="url(#hive-rim)" stroke="#8a6f1f" stroke-width="0.6"
+    stroke-linejoin="round" vector-effect="non-scaling-stroke" />
+  <polygon points="28.50,6.06 71.50,6.06 96.50,43.30 71.50,80.54 28.50,80.54 3.50,43.30"
+    fill="url(#hive-face)" stroke="rgba(0,0,0,0.18)" stroke-width="0.4"
+    stroke-linejoin="round" vector-effect="non-scaling-stroke" />
+  <path d="M 3.50,43.30 L 28.50,6.06 L 71.50,6.06 L 96.50,43.30"
+    fill="none" stroke="url(#hive-catch)" stroke-width="1"
+    stroke-linejoin="round" stroke-linecap="round"
+    vector-effect="non-scaling-stroke" />
+</svg>

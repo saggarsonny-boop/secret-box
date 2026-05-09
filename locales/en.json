@@ -1,0 +1,26 @@
+{
+  "footer": {
+    "tagline": {
+      "line1": "No ads. No investors. No agenda.",
+      "line2": "Free at the base tier, forever."
+    },
+    "privacy": "Anonymous by design. No accounts, no IP storage, no tracking. Rate limits live in a session cookie that holds nothing personal.",
+    "signature": {
+      "madeWith": "Made with",
+      "inThe": "in the",
+      "brand": "Hive"
+    }
+  },
+  "home": {
+    "install": {
+      "banner": {
+        "regionAria": "Add HiveSecretBox to your home screen",
+        "dismissAria": "Dismiss install hint",
+        "home": "Add HiveSecretBox to your home screen for one-tap access. No signup, no tracking — just a private place for the truths you can't say out loud."
+      }
+    },
+    "firstVisit": {
+      "body": "Anonymous secrets. No account. Read what others share. Add your own when you're ready."
+    }
+  }
+}

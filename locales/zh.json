@@ -1,0 +1,26 @@
+{
+  "footer": {
+    "tagline": {
+      "line1": "无广告。无投资人。无议程。",
+      "line2": "基础层永久免费。"
+    },
+    "privacy": "设计上即匿名。无账户、不存储IP、无追踪。限制保存在一个不含任何个人信息的会话Cookie中。",
+    "signature": {
+      "madeWith": "用心制作",
+      "inThe": "于",
+      "brand": "Hive"
+    }
+  },
+  "home": {
+    "install": {
+      "banner": {
+        "regionAria": "把 HiveSecretBox 加到主屏幕",
+        "dismissAria": "忽略安装提示",
+        "home": "将 HiveSecretBox 添加到主屏幕，一键访问。无需注册、无追踪——只是一个安静的角落，存放那些你说不出口的真相。"
+      }
+    },
+    "firstVisit": {
+      "body": "匿名秘密。无账户。读别人分享的，准备好时再写下你自己的。"
+    }
+  }
+}

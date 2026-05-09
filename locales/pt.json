@@ -1,0 +1,26 @@
+{
+  "footer": {
+    "tagline": {
+      "line1": "Sem anúncios. Sem investidores. Sem agenda.",
+      "line2": "Grátis no nível base, para sempre."
+    },
+    "privacy": "Anônimo por design. Sem contas, sem armazenar IP, sem rastreamento. Os limites vivem em um cookie de sessão que não guarda nada pessoal.",
+    "signature": {
+      "madeWith": "Feito com",
+      "inThe": "na",
+      "brand": "Hive"
+    }
+  },
+  "home": {
+    "install": {
+      "banner": {
+        "regionAria": "Adicionar HiveSecretBox à tela inicial",
+        "dismissAria": "Dispensar sugestão de instalação",
+        "home": "Adicione HiveSecretBox à sua tela inicial para acesso com um toque. Sem cadastro, sem rastreamento — apenas um lugar privado para as verdades que você não pode dizer em voz alta."
+      }
+    },
+    "firstVisit": {
+      "body": "Segredos anônimos. Sem conta. Leia o que os outros compartilham. Adicione o seu quando estiver pronto."
+    }
+  }
+}
