@@ -1,38 +1,26 @@
 node_modules
-<<<<<<< HEAD
-*.keystore
-*.jks
-*.aab
-*.apk
-*.idsig
-.env
-.env.local
-.env*.local
-.next
-.DS_Store
-/app/build/
-=======
 .next
 out
 
 # env
 .env
 .env.local
-.env.*.local
+.env*.local
 
-# Android build artifacts and signing material — keystore rotation lives in
-# its own branch (security/keystore-rotation). Generated APK/AAB outputs
-# don't belong in source control.
-android.keystore
+# Android signing material lives ONLY in operator-managed secrets, never
+# in git. Generated APK/AAB outputs and Gradle caches don't belong in
+# source control either.
+*.keystore
+*.jks
+*.aab
 *.apk
 *.apk.idsig
-*.aab
+*.idsig
 .gradle/
 build/
-app/build/
+/app/build/
 
 # OS / editor noise
 .DS_Store
 *.log
 *.tsbuildinfo
->>>>>>> 57c0c11 (feat(secret-box): viral features + canonical migration)
