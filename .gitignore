@@ -1,12 +1,26 @@
 node_modules
+.next
+out
+
+# env
+.env
+.env.local
+.env*.local
+
+# Android signing material lives ONLY in operator-managed secrets, never
+# in git. Generated APK/AAB outputs and Gradle caches don't belong in
+# source control either.
 *.keystore
 *.jks
 *.aab
 *.apk
+*.apk.idsig
 *.idsig
-.env
-.env.local
-.env*.local
-.next
-.DS_Store
+.gradle/
+build/
 /app/build/
+
+# OS / editor noise
+.DS_Store
+*.log
+*.tsbuildinfo

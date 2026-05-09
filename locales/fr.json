@@ -1,0 +1,26 @@
+{
+  "footer": {
+    "tagline": {
+      "line1": "Pas de pub. Pas d'investisseurs. Pas d'agenda.",
+      "line2": "Gratuit au niveau de base, pour toujours."
+    },
+    "privacy": "Anonyme par conception. Pas de compte, pas de stockage d'IP, pas de suivi. Les limites vivent dans un cookie de session qui ne contient rien de personnel.",
+    "signature": {
+      "madeWith": "Fait avec",
+      "inThe": "dans la",
+      "brand": "Hive"
+    }
+  },
+  "home": {
+    "install": {
+      "banner": {
+        "regionAria": "Ajouter HiveSecretBox à l'écran d'accueil",
+        "dismissAria": "Ignorer la suggestion d'installation",
+        "home": "Ajoutez HiveSecretBox à votre écran d'accueil pour un accès en un geste. Pas d'inscription, pas de suivi — juste un endroit privé pour les vérités que vous ne pouvez pas dire à voix haute."
+      }
+    },
+    "firstVisit": {
+      "body": "Secrets anonymes. Pas de compte. Lisez ce que les autres partagent. Ajoutez le vôtre quand vous serez prêt."
+    }
+  }
+}

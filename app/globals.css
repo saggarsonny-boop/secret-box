@@ -1,0 +1,26 @@
+/* Canonical Hive palette — Hive gold #D4AF37 + Hive ink #0a0a0a per
+   HIVE_CONSTITUTION §C3/§C4. The original Secret Box "muted parchment"
+   accent (#c8b8a2) stays as the text/body accent so the meditative
+   reading surface keeps its identity; CTAs and brand markers move to
+   Hive gold to match the rest of the ecosystem. */
+
+:root {
+  --hive-gold: #D4AF37;
+  --hive-ink: #0a0a0a;
+  --hive-paper: #f5f1e6;
+  --hive-muted: #9a9588;
+  --hive-gold-dim: #8a6f1f;
+  --sb-accent: #c8b8a2;
+  --sb-night-accent: #9b7fa6;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--hive-ink);
+  color: #e8e8e8;
+}
+
+* {
+  -webkit-tap-highlight-color: rgba(212, 175, 55, 0.2);
+}
