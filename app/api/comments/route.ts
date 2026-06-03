@@ -9,6 +9,11 @@ import { getTier } from '@/lib/tier';
 import { assertNoIdentity } from '@/lib/safety';
 import { govern } from '@/lib/governance';
 
+function localSafetyCheck(text: string): boolean {
+  const forbidden = /\b(suicide|kill myself|end my life|slit my wrist|hang myself|shoot myself|self harm|slits? my wrists?)\b/i;
+  return !forbidden.test(text);
+}
+
 async function moderateComment(content: string): Promise<{safe: boolean; reason: string}> {
   if (await isOverCap('anthropic')) return { safe: true, reason: '' };
   try {
@@ -69,13 +74,19 @@ export async function POST(req: Request) {
     if (!content || content.length < 2) return NextResponse.json({ error: 'Too short' }, { status: 400 });
     if (content.length > 80) return NextResponse.json({ error: 'Too long' }, { status: 400 });
 
+    if (!localSafetyCheck(content)) {
+      return NextResponse.json({ error: 'unkind' }, { status: 422 });
+    }
+
     const ip = ipFromHeaders(req.headers);
     const ts = await verifyTurnstile(turnstile_token, ip);
     if (!ts.ok) return NextResponse.json({ error: 'captcha_failed' }, { status: 400 });
 
     const { token } = await getOrCreateSessionToken();
     const tier = await getTier();
-    const limit = await checkAndIncrement(token, 'comments_60m', tier);
+    
+    // Apply dual IP-based rate limiting
+    const limit = await checkAndIncrement(token, 'comments_60m', tier, ip);
     if (!limit.ok) {
       return NextResponse.json({ error: 'rate_limited', resetSec: limit.resetSec }, { status: 429 });
     }
@@ -83,10 +94,7 @@ export async function POST(req: Request) {
     const { safe, reason } = await moderateComment(content);
     if (!safe) return NextResponse.json({ error: reason }, { status: 400 });
 
-    // Queen Bee — single-engine registry maps secretbox → secret-response,
-    // so comments use the same {received, resonance} envelope. The
-    // received field signals "this comment was accepted upstream"; the
-    // resonance field is 0 because comments don't carry a resonance count.
+    // Queen Bee — single-engine registry maps secretbox → secret-response
     const verdict = await govern({
       input: content,
       content: { received: true, resonance: 0 },

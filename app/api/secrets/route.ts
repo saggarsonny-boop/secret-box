@@ -17,8 +17,14 @@ function containsPersonalInfo(text: string): boolean {
   return emailRegex.test(text) || phoneRegex.test(text) || namePatterns.test(text);
 }
 
-async function getAIResponse(content: string): Promise<string> {
-  const fallback = 'You are not alone in this.';
+function localSafetyCheck(text: string): boolean {
+  // Simple check for extreme words to reject instantly without API latency or cost
+  const forbidden = /\b(suicide|kill myself|end my life|slit my wrist|hang myself|shoot myself|self harm|slits? my wrists?)\b/i;
+  return !forbidden.test(text);
+}
+
+async function getAIResponseAndModeration(content: string): Promise<{ safe: boolean; response: string }> {
+  const fallback = { safe: true, response: 'You are not alone in this.' };
   if (await isOverCap('anthropic')) return fallback;
   try {
     const key = process.env.ANTHROPIC_API_KEY;
@@ -32,10 +38,23 @@ async function getAIResponse(content: string): Promise<string> {
       },
       body: JSON.stringify({
         model: 'claude-haiku-4-5-20251001',
-        max_tokens: 150,
+        max_tokens: 200,
         messages: [{
           role: 'user',
-          content: `Someone anonymously shared this secret: "${content}"\n\nWrite a single short, warm, human response (2-3 sentences max) that makes them feel less alone. No advice. Just compassion. Respond in the same language as the secret.`
+          content: `You are a moderator and companion for an anonymous confession website.
+Analyze this secret: "${content}"
+
+Determine if it violates safety rules:
+1. Extremely unsafe, promoting self-harm or suicide.
+2. Graphic violence or severe targeted harassment/abuse.
+3. Illegal activities.
+
+If it violates safety, reply EXACTLY with:
+STATUS: UNSAFE
+
+If it is safe, reply EXACTLY in this format:
+STATUS: SAFE
+RESPONSE: <write a single short, warm, human response (2-3 sentences max) that makes them feel less alone. No advice. Just compassion. Respond in the same language as the secret.>`
         }]
       })
     });
@@ -43,7 +62,15 @@ async function getAIResponse(content: string): Promise<string> {
     if (data.usage) {
       await recordSpend(estimateAnthropicCents(data.usage.input_tokens, data.usage.output_tokens));
     }
-    if (data.content && data.content[0]) return data.content[0].text;
+    const text = data.content && data.content[0] ? data.content[0].text.trim() : '';
+    if (text.startsWith('STATUS: UNSAFE')) {
+      return { safe: false, response: '' };
+    }
+    if (text.startsWith('STATUS: SAFE')) {
+      const match = text.match(/RESPONSE:\s*([\s\S]+)$/i);
+      const resVal = match ? match[1].trim() : 'You are not alone in this.';
+      return { safe: true, response: resVal };
+    }
     return fallback;
   } catch {
     return fallback;
@@ -56,10 +83,10 @@ export async function GET() {
     const secrets = await sql`
       SELECT id, content, category, resonance, me_too_count,
              ai_response, image_url, ai_image_url, ai_image_generated_at,
-             city, scheduled_release_at, published_at, created_at
+             city, scheduled_release_at, published_at, boosted_until, created_at
         FROM secrets
         WHERE published_at IS NOT NULL
-        ORDER BY published_at DESC
+        ORDER BY (boosted_until IS NOT NULL AND boosted_until > NOW()) DESC, published_at DESC
         LIMIT 50
     `;
     return NextResponse.json(assertNoIdentity(secrets));
@@ -82,6 +109,11 @@ export async function POST(req: Request) {
 
     if (!content || content.length < 5) return NextResponse.json({ error: 'Too short' }, { status: 400 });
     if (containsPersonalInfo(content)) return NextResponse.json({ error: 'personal_info' }, { status: 400 });
+    
+    // First line of defense: check local safety filter for self-harm / suicide phrases
+    if (!localSafetyCheck(content)) {
+      return NextResponse.json({ error: 'self_harm_detected', detail: 'If you are experiencing thoughts of self-harm, please reach out to a support helpline.' }, { status: 422 });
+    }
 
     const ip = ipFromHeaders(req.headers);
     const ts = await verifyTurnstile(turnstile_token, ip);
@@ -89,12 +121,19 @@ export async function POST(req: Request) {
 
     const { token } = await getOrCreateSessionToken();
     const tier = await getTier();
-    const limit = await checkAndIncrement(token, 'secrets_24h', tier);
+    
+    // Apply dual cookie + hashed IP rate limiting
+    const limit = await checkAndIncrement(token, 'secrets_24h', tier, ip);
     if (!limit.ok) {
       return NextResponse.json({ error: 'rate_limited', resetSec: limit.resetSec }, { status: 429 });
     }
 
-    const ai_response = await getAIResponse(content);
+    // Call LLM for combined companion response and moderation
+    const modResult = await getAIResponseAndModeration(content);
+    if (!modResult.safe) {
+      return NextResponse.json({ error: 'content_moderation_failed' }, { status: 422 });
+    }
+    const ai_response = modResult.response;
 
     const city = share_city === false ? null : cityFromHeaders(req.headers);
 
@@ -112,7 +151,6 @@ export async function POST(req: Request) {
     const theme = await classifyTheme(content);
 
     // Queen Bee — validate the structured output before storage.
-    // Schema = secret-response (registry); required fields {received, resonance}.
     const verdict = await govern({
       input: content,
       content: { received: true, resonance: 0 },
@@ -137,12 +175,13 @@ export async function POST(req: Request) {
       )
       RETURNING id, content, category, resonance, me_too_count,
                 ai_response, image_url, ai_image_url, ai_image_generated_at,
-                city, scheduled_release_at, published_at, theme, created_at,
+                city, scheduled_release_at, published_at, boosted_until, theme, created_at,
                 governance_stamp
     `;
     const row = result[0] as Record<string, unknown>;
     return NextResponse.json({ ...assertNoIdentity(row), _governance: stamp });
-  } catch {
+  } catch (e) {
+    console.error('Submit secret error:', e);
     return NextResponse.json({ error: 'Failed' }, { status: 500 });
   }
 }

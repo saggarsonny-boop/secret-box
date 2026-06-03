@@ -4,7 +4,7 @@ import { Analytics } from '@vercel/analytics/next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'HiveSecretBox — anonymous secrets, no account, you are not alone',
+  title: "HiveSecretBox — Say the thing you haven't said.",
   description: 'Anonymous secrets. No account, no IP storage, no tracking. A private place for the truths you cannot say out loud.',
   manifest: '/manifest.json',
   icons: {

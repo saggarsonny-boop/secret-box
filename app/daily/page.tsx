@@ -1,4 +1,5 @@
 import { headers } from 'next/headers';
+import type { Metadata } from 'next';
 import DailySoundCue from './DailySoundCue';
 
 type Secret = {
@@ -38,6 +39,27 @@ function fmtDate(d: string): string {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) return d;
   return new Date(d + 'T00:00:00Z').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', timeZone: 'UTC' });
 }
+
+export async function generateMetadata({ searchParams }: { searchParams: Promise<{ date?: string }> }): Promise<Metadata> {
+  const { date } = await searchParams;
+  const displayDate = date ? fmtDate(date) : 'Today';
+  const dropData = await getDrop(date);
+  const firstSecretId = dropData.secrets[0]?.id;
+  const ogImageUrl = firstSecretId ? `/api/og?id=${firstSecretId}` : '/og.png';
+  return {
+    title: `HiveSecretBox Daily Drop — ${displayDate}`,
+    description: `Read the curated anonymous daily secrets drop for ${displayDate} on HiveSecretBox. No accounts, no tracking. You are not alone.`,
+    openGraph: {
+      title: `HiveSecretBox Daily Drop — ${displayDate}`,
+      description: `Read the curated anonymous daily secrets drop for ${displayDate} on HiveSecretBox.`,
+      url: `https://secretbox.hive.baby/daily${date ? `?date=${date}` : ''}`,
+      siteName: 'HiveSecretBox',
+      images: [{ url: ogImageUrl, width: 1200, height: 630 }],
+      type: 'website'
+    }
+  };
+}
+
 
 export default async function DailyPage({ searchParams }: { searchParams: Promise<{ date?: string }> }) {
   const { date } = await searchParams;
