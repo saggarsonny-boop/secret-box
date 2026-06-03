@@ -475,9 +475,10 @@ export default function Home() {
 
   async function nativeShare() {
     if (!sharePreview) return;
+    const shareUrl = `${window.location.origin}/secret/${sharePreview.secret.id}`;
     if (navigator.share) {
       try {
-        await navigator.share({ text: `"${sharePreview.secret.content}" — you are not alone\n\nsecretbox.hive.baby`, url: 'https://secretbox.hive.baby' });
+        await navigator.share({ text: `"${sharePreview.secret.content}" — you are not alone`, url: shareUrl });
       } catch {}
     } else {
       downloadShare();

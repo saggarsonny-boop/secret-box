@@ -9,6 +9,8 @@ import { getTier } from '@/lib/tier';
 import { assertNoIdentity } from '@/lib/safety';
 import { classifyTheme } from '@/lib/theme';
 import { govern } from '@/lib/governance';
+import { pingIndexNow } from '@/lib/indexnow';
+
 
 function containsPersonalInfo(text: string): boolean {
   const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/;
@@ -179,6 +181,12 @@ export async function POST(req: Request) {
                 governance_stamp
     `;
     const row = result[0] as Record<string, unknown>;
+    
+    // Automatically trigger search engine crawl indexing via IndexNow
+    if (schedule === 'now' && row.id) {
+      pingIndexNow(String(row.id)).catch(() => {});
+    }
+    
     return NextResponse.json({ ...assertNoIdentity(row), _governance: stamp });
   } catch (e) {
     console.error('Submit secret error:', e);
