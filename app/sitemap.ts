@@ -70,5 +70,30 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     console.error('Sitemap DB art fetch error:', e);
   }
 
+  // 4. Fetch top 500 published secrets for individual long-tail pages
+  try {
+    const sql = getDb();
+    const secrets = await sql`
+      SELECT id, published_at
+      FROM secrets
+      WHERE published_at IS NOT NULL
+      ORDER BY published_at DESC
+      LIMIT 500
+    ` as { id: number; published_at: string }[];
+
+    secrets.forEach(s => {
+      if (s.id && s.published_at) {
+        routes.push({
+          url: `${baseUrl}/secret/${s.id}`,
+          lastModified: new Date(s.published_at),
+          changeFrequency: 'weekly',
+          priority: 0.5,
+        });
+      }
+    });
+  } catch (e) {
+    console.error('Sitemap DB secrets dynamic URL fetch error:', e);
+  }
+
   return routes;
 }

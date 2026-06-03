@@ -1,5 +1,6 @@
 import { getDb } from '@/lib/db';
 import { NextResponse } from 'next/server';
+import { pingIndexNow } from '@/lib/indexnow';
 
 // POST /api/publish-queue — releases time-released secrets whose
 // scheduled_release_at has passed. Auth via CRON_SECRET. Runs every 5min
@@ -21,6 +22,12 @@ export async function POST(req: Request) {
           AND published_at IS NULL
         RETURNING id
     ` as { id: number }[];
+
+    // Trigger crawl requests for all newly published confessions
+    if (released.length > 0) {
+      Promise.all(released.map(r => pingIndexNow(r.id).catch(() => {}))).catch(() => {});
+    }
+
     return NextResponse.json({ released: released.length });
   } catch (e: unknown) {
     return NextResponse.json({ error: 'failed', detail: String(e) }, { status: 500 });
