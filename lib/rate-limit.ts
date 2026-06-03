@@ -1,4 +1,5 @@
 import { getDb } from './db';
+import crypto from 'crypto';
 
 export type Tier = 'free' | 'plus' | 'pro';
 export type Bucket = 'secrets_24h' | 'comments_60m' | 'ai_image_24h';
@@ -21,9 +22,16 @@ const LIMITS: Record<Bucket, Record<Tier, { max: number; windowSec: number }>> =
   }
 };
 
-export async function checkAndIncrement(token: string, bucket: Bucket, tier: Tier): Promise<{ ok: boolean; remaining: number; resetSec: number }> {
+export async function checkAndIncrement(
+  token: string,
+  bucket: Bucket,
+  tier: Tier,
+  ip?: string | null
+): Promise<{ ok: boolean; remaining: number; resetSec: number }> {
   const cfg = LIMITS[bucket][tier];
   const sql = getDb();
+  
+  // 1. Check & increment session token limit
   const rows = await sql`
     INSERT INTO rate_limits (session_token, bucket, count, window_start)
     VALUES (${token}, ${bucket}, 1, NOW())
@@ -39,8 +47,45 @@ export async function checkAndIncrement(token: string, bucket: Bucket, tier: Tie
     RETURNING count, EXTRACT(EPOCH FROM (NOW() - window_start))::int AS elapsed
   `;
   const r = rows[0] as { count: number; elapsed: number };
+
+  let ipOk = true;
+  let ipRemaining = cfg.max;
+  let ipResetSec = 0;
+
+  // 2. Dual check: if IP is provided, check & increment IP-based limit (using hashed IP as session_token)
+  if (ip) {
+    const salt = process.env.PLUS_AUTH_SECRET || 'secretbox_fallback_salt';
+    const ipHash = crypto.createHmac('sha256', salt).update(ip).digest('hex');
+    const ipRows = await sql`
+      INSERT INTO rate_limits (session_token, bucket, count, window_start)
+      VALUES (${ipHash}, ${bucket}, 1, NOW())
+      ON CONFLICT (session_token, bucket) DO UPDATE
+        SET count = CASE
+          WHEN rate_limits.window_start < NOW() - (${cfg.windowSec} || ' seconds')::interval THEN 1
+          ELSE rate_limits.count + 1
+        END,
+        window_start = CASE
+          WHEN rate_limits.window_start < NOW() - (${cfg.windowSec} || ' seconds')::interval THEN NOW()
+          ELSE rate_limits.window_start
+        END
+      RETURNING count, EXTRACT(EPOCH FROM (NOW() - window_start))::int AS elapsed
+    `;
+    const ipR = ipRows[0] as { count: number; elapsed: number };
+    if (ipR.count > cfg.max) {
+      ipOk = false;
+      ipRemaining = 0;
+      ipResetSec = Math.max(0, cfg.windowSec - ipR.elapsed);
+    } else {
+      ipRemaining = cfg.max - ipR.count;
+      ipResetSec = Math.max(0, cfg.windowSec - ipR.elapsed);
+    }
+  }
+  
   if (r.count > cfg.max) {
     return { ok: false, remaining: 0, resetSec: Math.max(0, cfg.windowSec - r.elapsed) };
   }
-  return { ok: true, remaining: cfg.max - r.count, resetSec: Math.max(0, cfg.windowSec - r.elapsed) };
+  if (!ipOk) {
+    return { ok: false, remaining: 0, resetSec: ipResetSec };
+  }
+  return { ok: true, remaining: Math.min(cfg.max - r.count, ipRemaining), resetSec: Math.max(0, cfg.windowSec - r.elapsed) };
 }

@@ -23,6 +23,7 @@ type Secret = {
   city?: string | null;
   published_at?: string | null;
   scheduled_release_at?: string | null;
+  boosted_until?: string | null;
 };
 type Comment = { id: number; secret_id: number; content: string; created_at: string };
 type Pending = { id: number; content: string; category: string; scheduled_release_at: string; created_at: string };
@@ -115,6 +116,7 @@ export default function Home() {
   const [view, setView] = useState<'feed'|'submit'|'followup'>('feed');
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [boostedSuccess, setBoostedSuccess] = useState(false);
   const [followupAnswer, setFollowupAnswer] = useState('');
   const [followupDone, setFollowupDone] = useState(false);
   const [meTooed, setMeTooed] = useState<Set<number>>(new Set());
@@ -169,6 +171,13 @@ export default function Home() {
     fetch('/api/mostfelt').then(r=>r.json()).then(setMostFelt).catch(()=>{});
     fetch('/api/secretofday').then(r=>r.json()).then(setSecretOfDay).catch(()=>{});
     fetch('/api/secrets-pending').then(r=>r.json()).then(d => Array.isArray(d) && setPending(d)).catch(()=>{});
+
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('boosted') === 'true') {
+      setBoostedSuccess(true);
+      setTimeout(() => setBoostedSuccess(false), 8000);
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
   }, []);
 
   useEffect(() => {
@@ -384,6 +393,26 @@ export default function Home() {
     dismissFirstVisit();
   }
 
+  async function triggerCheckout(planName: 'plus' | 'pro' | 'boost', secretId?: number) {
+    try {
+      const res = await fetch('/api/checkout-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ planName, secretId })
+      });
+      if (!res.ok) {
+        console.error('Checkout creation failed');
+        return;
+      }
+      const data = await res.json() as { url: string };
+      if (data.url) {
+        window.location.href = data.url;
+      }
+    } catch (e) {
+      console.error('Checkout redirect error:', e);
+    }
+  }
+
   async function cancelPending(id: number) {
     try {
       const res = await fetch('/api/secrets-pending', { method:'DELETE', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ id }) });
@@ -460,12 +489,13 @@ export default function Home() {
     const meTooCount = (s.me_too_count || 0) + s.resonance;
     const cityLine = s.city ? T.someoneIn.replace('{city}', s.city) : T.somewhereInWorld;
     const overlayUrl = s.ai_image_url || s.image_url;
+    const isBoosted = !!(s.boosted_until && new Date(s.boosted_until) > new Date());
     return (
       <div style={{
-        borderLeft: featured?'none':`2px solid ${dim}`,
-        border: featured?`1px solid ${accent}`:undefined,
-        background: featured?'#111':undefined,
-        padding: featured?'20px':`0 0 0 16px`,
+        borderLeft: featured ? 'none' : (isBoosted ? `2px solid ${accent}` : `2px solid ${dim}`),
+        border: featured || isBoosted ? `1px solid ${accent}` : undefined,
+        background: featured || isBoosted ? (isBoosted ? '#0f0e0a' : '#111') : undefined,
+        padding: featured || isBoosted ? '20px' : `0 0 0 16px`,
         marginBottom:'36px',
         opacity: visible.has(s.id) ? 1 : 0,
         transform: visible.has(s.id) ? 'translateY(0)' : 'translateY(12px)',
@@ -473,10 +503,12 @@ export default function Home() {
       }}>
         {overlayUrl && <img src={overlayUrl} alt="" style={{width:'100%',maxHeight:'300px',objectFit:'cover',marginBottom:'12px',opacity:0.85}} />}
         <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'8px'}}>
-          <p style={{fontSize:'11px',color: featured?'#888':'#444',letterSpacing:'2px',margin:0}}>{s.category.toUpperCase()}{label ? ` · ${label}` : ''}</p>
+          <p style={{fontSize:'11px',color: featured || isBoosted ? accent : '#444',letterSpacing:'2px',margin:0}}>
+            {s.category.toUpperCase()}{label ? ` · ${label}` : ''}{isBoosted ? ' · ⚡ BOOSTED' : ''}
+          </p>
           <p style={{fontSize:'11px',color:'#333',margin:0}}>{timeAgo(s.created_at)}</p>
         </div>
-        <p style={{fontSize: featured?'17px':'16px',lineHeight:'1.7',color: featured?'#fff':'#ccc'}}>{s.content}</p>
+        <p style={{fontSize: featured || isBoosted ? '17px' : '16px',lineHeight:'1.7',color: featured || isBoosted ? '#fff' : '#ccc'}}>{s.content}</p>
         <p style={{fontSize:'11px',color:'#555',margin:'8px 0 0 0',fontStyle:'italic'}}>{cityLine}</p>
         {s.ai_response && s.ai_response !== 'You are not alone in this.' && (
           <p style={{fontSize:'14px',lineHeight:'1.7',color:textAccent,marginTop:'12px',fontStyle:'italic',borderLeft:'1px solid #333',paddingLeft:'12px'}}>{s.ai_response}</p>
@@ -494,6 +526,11 @@ export default function Home() {
           <button onClick={()=>handleShareClick(s)} style={{background:'none',border:'none',color:'#444',cursor:'pointer',fontSize:'11px',padding:'0',letterSpacing:'1px'}}>
             {sharing===s.id?'...':'↗ SHARE'}
           </button>
+          {!isBoosted && (
+            <button onClick={()=>triggerCheckout('boost', s.id)} style={{background:'none',border:'none',color:'#665533',cursor:'pointer',fontSize:'11px',padding:'0',letterSpacing:'1px',fontWeight:'bold'}}>
+              ⚡ BOOST
+            </button>
+          )}
           {featured && <button onClick={showRandom} style={{background:'none',border:'none',color:'#444',cursor:'pointer',fontSize:'11px',letterSpacing:'1px'}}>{T.next}</button>}
         </div>
 
@@ -530,6 +567,11 @@ export default function Home() {
     <AutoDemo />
     <FirstVisitCard />
     <main style={{background:bg,minHeight:'100vh',color:'#e8e8e8',fontFamily:'Georgia,serif',maxWidth:'600px',margin:'0 auto',padding:'24px 16px',transition:'background 1s'}}>
+      {boostedSuccess && (
+        <div style={{ background: 'rgba(212,175,55,0.15)', border: `1px solid ${accent}`, color: accent, padding: '12px', marginBottom: '24px', fontSize: '13px', textAlign: 'center', letterSpacing: '1px', animation: 'sb-fade-in 0.3s ease' }}>
+          ✦ CONFESSION BOOSTED! IT HAS BEEN FEATURED AT THE TOP OF THE FEED.
+        </div>
+      )}
 
       {sharePreview && (
         <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.92)',zIndex:200,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:'24px'}}>
@@ -621,8 +663,8 @@ export default function Home() {
           <div style={{textAlign:'center',marginTop:'48px',paddingTop:'32px',borderTop:'1px solid #111'}}>
             <p style={{fontSize:'12px',color:'#333',marginBottom:'16px',lineHeight:'1.8'}}>this app is free, forever.<br/><span style={{color:'#2a2a2a'}}>if it helped you, you can support it.</span></p>
             <div style={{display:'flex',gap:'8px',justifyContent:'center',flexWrap:'wrap'}}>
-              <button onClick={()=>window.open('https://buy.stripe.com/14A6oJ6Mv3sReEa0YV0RG00','_blank')} style={{background:'transparent',border:'1px solid #2a2a2a',color:'#444',padding:'8px 16px',fontSize:'11px',letterSpacing:'1px',cursor:'pointer'}}>$1.99 / mo</button>
-              <button onClick={()=>window.open('https://buy.stripe.com/7sYcN79YHe7v53AcHD0RG01','_blank')} style={{background:'transparent',border:'1px solid #2a2a2a',color:'#444',padding:'8px 16px',fontSize:'11px',letterSpacing:'1px',cursor:'pointer'}}>$19 / yr</button>
+              <button onClick={()=>triggerCheckout('plus')} style={{background:'transparent',border:'1px solid #2a2a2a',color:'#444',padding:'8px 16px',fontSize:'11px',letterSpacing:'1px',cursor:'pointer'}}>$1.99 / mo</button>
+              <button onClick={()=>triggerCheckout('pro')} style={{background:'transparent',border:'1px solid #2a2a2a',color:'#444',padding:'8px 16px',fontSize:'11px',letterSpacing:'1px',cursor:'pointer'}}>$19 / yr</button>
               <button onClick={()=>window.open('https://buy.stripe.com/9B6aEZ7Qzd3rcw2bDz0RG02','_blank')} style={{background:'transparent',border:'1px solid #2a2a2a',color:'#444',padding:'8px 16px',fontSize:'11px',letterSpacing:'1px',cursor:'pointer'}}>$5 once</button>
             </div>
             <div style={{ marginTop: 24, display: 'flex', gap: 12, justifyContent: 'center', alignItems: 'center', flexWrap: 'wrap' }}>
