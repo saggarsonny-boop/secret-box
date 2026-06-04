@@ -16,6 +16,7 @@ type BeforeInstallPromptEvent = Event & {
 export default function HiveInstallHint({ message }: { message?: string }) {
   const [visible, setVisible] = useState(false);
   const [deferred, setDeferred] = useState<BeforeInstallPromptEvent | null>(null);
+  const [isIOS, setIsIOS] = useState(false);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -24,6 +25,9 @@ export default function HiveInstallHint({ message }: { message?: string }) {
       || (window.navigator as { standalone?: boolean }).standalone === true;
     if (standalone) return;
     setVisible(true);
+
+    const ios = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+    setIsIOS(ios);
 
     const onPrompt = (e: Event) => {
       e.preventDefault();
@@ -57,7 +61,12 @@ export default function HiveInstallHint({ message }: { message?: string }) {
     setVisible(false);
   };
 
-  const text = message || 'Add HiveSecretBox to your home screen for one-tap access.';
+  // Provide custom guidelines for iOS Safari users who do not have the native beforeinstallprompt API
+  const text = message || (
+    isIOS && !deferred
+      ? 'Add to Home Screen: tap the Share button ⎋ at the bottom of Safari, then select "Add to Home Screen".'
+      : 'Add HiveSecretBox to your home screen for one-tap access.'
+  );
 
   return (
     <div role="region" aria-label="Add HiveSecretBox to your home screen" style={{
@@ -70,11 +79,11 @@ export default function HiveInstallHint({ message }: { message?: string }) {
       gap: 12
     }}>
       <p style={{ fontSize: 12, color: '#9a9588', margin: 0, lineHeight: 1.5, flex: 1 }}>{text}</p>
-      <div style={{ display: 'flex', gap: 8 }}>
+      <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
         {deferred && (
           <button onClick={install} style={{ background: '#D4AF37', color: '#0a0a0a', border: 'none', padding: '4px 10px', fontSize: 11, letterSpacing: 1, cursor: 'pointer', borderRadius: 4 }}>ADD</button>
         )}
-        <button onClick={dismiss} aria-label="Dismiss install hint" style={{ background: 'transparent', border: 'none', color: '#666', cursor: 'pointer', fontSize: 14, padding: '0 4px' }}>×</button>
+        <button onClick={dismiss} aria-label="Dismiss install hint" style={{ background: 'transparent', border: 'none', color: '#666', cursor: 'pointer', fontSize: 18, padding: '0 4px', lineHeight: 1 }}>×</button>
       </div>
     </div>
   );
