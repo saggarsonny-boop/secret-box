@@ -17,14 +17,20 @@ export async function GET(req: Request) {
 
     let tier: Tier = 'free';
     let secretId: string | null = null;
+    let valueCents = 0;
 
     if (sessionId.startsWith('mock_sess_')) {
       // Mock Mode Verification
       tier = ['plus', 'pro'].includes(mockPlan) ? mockPlan : 'plus';
       secretId = searchParams.get('secretId');
+      
+      // Assign mock value
+      if (mockPlan === 'plus') valueCents = 199;
+      else if (mockPlan === 'pro') valueCents = 1900;
+      else if (plan === 'boost' || secretId) valueCents = 500;
     } else {
       // Real Stripe Verification
-      const stripeKey = process.env.STRIPE_KEY;
+      const stripeKey = process.env.STRIPE_KEY || process.env.STRIPE_LIVE_KEY;
       if (!stripeKey) {
         return NextResponse.json({ error: 'Stripe configuration missing' }, { status: 500 });
       }
@@ -43,6 +49,7 @@ export async function GET(req: Request) {
       const sessionData = await sessionRes.json() as {
         payment_status: string;
         status: string;
+        amount_total?: number;
         metadata?: { tier?: string; secretId?: string };
       };
 
@@ -50,16 +57,31 @@ export async function GET(req: Request) {
         const stripeTier = sessionData.metadata?.tier;
         tier = (stripeTier === 'pro' || stripeTier === 'plus') ? stripeTier as Tier : 'plus';
         secretId = sessionData.metadata?.secretId || null;
+        valueCents = sessionData.amount_total || 0;
       } else {
         console.error('Stripe session unpaid:', sessionData);
         return NextResponse.redirect(new URL('/?error=payment_unpaid', req.url));
       }
     }
 
+    // Log checkout completed event to traffic_logs
+    const sql = getDb();
+    try {
+      const ua = req.headers.get('user-agent') || '';
+      const botPattern = /bot|crawler|spider|crawling/i;
+      const isBot = botPattern.test(ua);
+      const loggedPlan = plan || tier;
+      await sql`
+        INSERT INTO traffic_logs (is_bot, user_agent, action, plan, conversion_value_cents)
+        VALUES (${isBot}, ${ua}, 'checkout_completed', ${loggedPlan}, ${valueCents})
+      `;
+    } catch (dbErr) {
+      console.error('Failed to log checkout completion to traffic_logs:', dbErr);
+    }
+
     // Handle Micropayment Confession Boosts
     if (plan === 'boost' || secretId) {
       if (secretId) {
-        const sql = getDb();
         await sql`
           UPDATE secrets
           SET boosted_until = NOW() + INTERVAL '24 hours'
@@ -71,11 +93,8 @@ export async function GET(req: Request) {
 
     // Set signed cookie and redirect to success page for tier subscriptions
     const jar = await cookies();
-    
-    // Sign the cookie using our cryptographic helper
     const signedValue = signTierCookie(tier);
 
-    // Set cookie options: secure, httponly, samesite lax, 30 days expiry
     jar.set('hive_tier', signedValue, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',

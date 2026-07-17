@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { getDb } from '@/lib/db';
 
 export async function POST(req: Request) {
   try {
@@ -16,7 +17,22 @@ export async function POST(req: Request) {
     const proto = req.headers.get('x-forwarded-proto') || 'http';
     const origin = `${proto}://${host}`;
 
-    const stripeKey = process.env.STRIPE_KEY;
+    const stripeKey = process.env.STRIPE_KEY || process.env.STRIPE_LIVE_KEY;
+
+    // Log checkout started event
+    const sql = getDb();
+    try {
+      const ua = req.headers.get('user-agent') || '';
+      const botPattern = /bot|crawler|spider|crawling/i;
+      const isBot = botPattern.test(ua);
+      await sql`
+        INSERT INTO traffic_logs (is_bot, user_agent, action, plan)
+        VALUES (${isBot}, ${ua}, 'checkout_started', ${planName})
+      `;
+    } catch (dbErr) {
+      console.error('Failed to log checkout start to traffic_logs:', dbErr);
+    }
+
     if (!stripeKey) {
       // Mock Mode for Local Development / Sandboxed Testing
       console.log('Stripe key is missing, generating mock checkout session redirect.');
@@ -36,8 +52,6 @@ export async function POST(req: Request) {
 
     // Form-encoded parameters for Stripe Checkout session creation
     const params = new URLSearchParams();
-    
-    // One-time boosts use 'payment' mode, whereas tiers use 'subscription' mode
     const mode = planName === 'boost' ? 'payment' : 'subscription';
     
     params.append('success_url', `${origin}/api/payment-success-callback?session_id={CHECKOUT_SESSION_ID}&plan=${planName}`);

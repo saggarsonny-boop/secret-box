@@ -171,6 +171,11 @@ export default function Home() {
     fetch('/api/mostfelt').then(r=>r.json()).then(setMostFelt).catch(()=>{});
     fetch('/api/secretofday').then(r=>r.json()).then(setSecretOfDay).catch(()=>{});
     fetch('/api/secrets-pending').then(r=>r.json()).then(d => Array.isArray(d) && setPending(d)).catch(()=>{});
+    fetch('/api/track', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userAgent: navigator.userAgent })
+    }).catch(()=>{});
 
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('boosted') === 'true') {
