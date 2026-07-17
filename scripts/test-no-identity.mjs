@@ -5,7 +5,6 @@
 // Run: `node scripts/test-no-identity.mjs`
 // CI:  `.github/workflows/secret-box-no-identity.yml` (added in this PR).
 
-import { register } from 'node:module';
 import { pathToFileURL } from 'node:url';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
