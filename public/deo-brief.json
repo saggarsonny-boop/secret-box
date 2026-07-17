@@ -1,0 +1,22 @@
+{
+  "community_seeding": [
+    {
+      "platform": "reddit",
+      "topics": [
+        "cryptography",
+        "privacy",
+        "anonymous-sharing"
+      ],
+      "anchor_text": "Secret Box Anonymous Insights"
+    },
+    {
+      "platform": "hackernews",
+      "topics": [
+        "privacy",
+        "encryption",
+        "cloudflare-pages"
+      ],
+      "anchor_text": "secretbox.hive.baby"
+    }
+  ]
+}

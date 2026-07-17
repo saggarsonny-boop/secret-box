@@ -1,3 +1,4 @@
+export const runtime = 'edge';
 import { NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
 
@@ -11,10 +12,10 @@ export async function POST(req: Request) {
     const isBot = botPattern.test(ua);
 
     const sql = getDb();
-    await sql
+    await sql`
       INSERT INTO traffic_logs (is_bot, user_agent, action)
-      VALUES (\, \, 'page_view')
-    ;
+      VALUES (${isBot}, ${ua}, 'page_view')
+    `;
 
     return NextResponse.json({ success: true });
   } catch (e) {

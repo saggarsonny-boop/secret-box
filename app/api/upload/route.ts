@@ -1,15 +1,16 @@
+export const runtime = 'edge';
 import { NextResponse } from 'next/server';
-import { v2 as cloudinary } from 'cloudinary';
 import { getOrCreateSessionToken } from '@/lib/session';
 import { verifyTurnstile } from '@/lib/turnstile';
 import { isOverCap, recordSpend, estimateAnthropicCents } from '@/lib/cost-cap';
 import { ipFromHeaders } from '@/lib/geo';
 
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
-});
+async function sha1(message: string): Promise<string> {
+  const msgUint8 = new TextEncoder().encode(message);
+  const hashBuffer = await globalThis.crypto.subtle.digest('SHA-1', msgUint8);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
 
 async function moderateImage(base64: string): Promise<{safe: boolean; reason: string}> {
   if (await isOverCap('anthropic')) return { safe: true, reason: '' };
@@ -64,19 +65,46 @@ export async function POST(req: Request) {
     const { safe, reason } = await moderateImage(base64);
     if (!safe) {
       const messages: Record<string, string> = {
-        faces: 'Images with recognizable faces are not allowed. This protects everyone\'s privacy and safety.',
-        nudity: 'This image cannot be shared here. Please keep content appropriate for all ages.',
-        violence: 'Images showing violence are not allowed. This is a safe space.',
-        personal: 'Images showing personal information like names, numbers or emails are not allowed. Your safety matters.',
+        faces: "Images with recognizable faces are not allowed. This protects everyone's privacy and safety.",
+        nudity: "This image cannot be shared here. Please keep content appropriate for all ages.",
+        violence: "Images showing violence are not allowed. This is a safe space.",
+        personal: "Images showing personal information like names, numbers or emails are not allowed. Your safety matters.",
       };
       return NextResponse.json({ error: messages[reason] || 'Image not allowed' }, { status: 400 });
     }
-    const result = await cloudinary.uploader.upload(image, {
-      folder: 'secret-box',
-      transformation: [{ width: 800, crop: 'limit' }, { quality: 'auto' }]
+
+    // Direct REST API Upload to Cloudinary (Edge compatible)
+    const timestamp = Math.round(new Date().getTime() / 1000).toString();
+    const folder = 'secret-box';
+    const apiSecret = process.env.CLOUDINARY_API_SECRET || '';
+    const apiKey = process.env.CLOUDINARY_API_KEY || '';
+    const cloudName = process.env.CLOUDINARY_CLOUD_NAME || '';
+
+    // Generate SHA-1 signature of parameters (sorted alphabetically)
+    const paramString = `folder=${folder}&timestamp=${timestamp}${apiSecret}`;
+    const signature = await sha1(paramString);
+
+    const formData = new FormData();
+    formData.append("file", image);
+    formData.append("folder", folder);
+    formData.append("api_key", apiKey);
+    formData.append("timestamp", timestamp);
+    formData.append("signature", signature);
+
+    const uploadRes = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
+      method: "POST",
+      body: formData
     });
+
+    if (!uploadRes.ok) {
+      console.error("Cloudinary upload failed:", await uploadRes.text());
+      return NextResponse.json({ error: 'Upload failed' }, { status: 500 });
+    }
+
+    const result = await uploadRes.json() as { secure_url: string };
     return NextResponse.json({ url: result.secure_url });
-  } catch {
+  } catch (e) {
+    console.error("Upload API error:", e);
     return NextResponse.json({ error: 'Upload failed' }, { status: 500 });
   }
 }

@@ -1,3 +1,4 @@
+export const runtime = 'edge';
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { signTierCookie } from '@/lib/tier';
@@ -93,7 +94,7 @@ export async function GET(req: Request) {
 
     // Set signed cookie and redirect to success page for tier subscriptions
     const jar = await cookies();
-    const signedValue = signTierCookie(tier);
+    const signedValue = await signTierCookie(tier);
 
     jar.set('hive_tier', signedValue, {
       httpOnly: true,

@@ -1,7 +1,7 @@
 import { MetadataRoute } from 'next';
 import { getDb } from '@/lib/db';
 
-export const dynamic = 'force-dynamic';
+export const runtime = 'edge';
 export const revalidate = 3600; // Cache for 1 hour
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {

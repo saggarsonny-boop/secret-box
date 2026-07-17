@@ -1,5 +1,17 @@
 import { getDb } from './db';
-import crypto from 'crypto';
+// HMAC SHA-256 helper for Rate Limit using Web Crypto
+async function hmacSha256(secret: string, data: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const keyData = encoder.encode(secret);
+  const messageData = encoder.encode(data);
+  const key = await globalThis.crypto.subtle.importKey(
+    "raw", keyData, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]
+  );
+  const signature = await globalThis.crypto.subtle.sign("HMAC", key, messageData);
+  return Array.from(new Uint8Array(signature)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+
 
 export type Tier = 'free' | 'plus' | 'pro';
 export type Bucket = 'secrets_24h' | 'comments_60m' | 'ai_image_24h';
@@ -55,7 +67,7 @@ export async function checkAndIncrement(
   // 2. Dual check: if IP is provided, check & increment IP-based limit (using hashed IP as session_token)
   if (ip) {
     const salt = process.env.PLUS_AUTH_SECRET || 'secretbox_fallback_salt';
-    const ipHash = crypto.createHmac('sha256', salt).update(ip).digest('hex');
+    const ipHash = await hmacSha256(salt, ip);
     const ipRows = await sql`
       INSERT INTO rate_limits (session_token, bucket, count, window_start)
       VALUES (${ipHash}, ${bucket}, 1, NOW())

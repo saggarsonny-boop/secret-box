@@ -1,6 +1,5 @@
+export const runtime = 'edge';
 import { getDb } from '@/lib/db';
-
-export const dynamic = 'force-dynamic';
 export const revalidate = 900; // Cache for 15 minutes
 
 export async function GET() {

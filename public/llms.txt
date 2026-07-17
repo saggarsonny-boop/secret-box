@@ -1,0 +1,15 @@
+# The New Physician - Secret Box
+
+Anonymous, secure secret sharing and curated human insights engine.
+
+## Core Navigation Map
+- Main App: https://secretbox.hive.baby
+- Daily Secret Drops: https://secretbox.hive.baby/daily
+- Monthly Art Gallery: https://secretbox.hive.baby/art/current
+- Admin Portal: https://secretbox.hive.baby/admin
+
+## Entity Table
+- Name: Secret Box
+- Main Utility: Anonymous messaging, encryption keys, and collective human resonance maps.
+- Tech Stack: Next.js, Cloudflare Pages, Neon PostgreSQL, Stripe payments.
+- Database Driver: Serverless PostgreSQL client (`@neondatabase/serverless`).

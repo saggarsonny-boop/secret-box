@@ -4,19 +4,19 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "next build --webpack",
     "start": "next start"
   },
   "dependencies": {
     "@neondatabase/serverless": "^0.10.4",
     "@vercel/analytics": "^2.0.1",
-    "canvas": "^3.2.3",
     "cloudinary": "^2.9.0",
     "next": "^16.2.3",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },
   "devDependencies": {
+    "@cloudflare/next-on-pages": "^1.13.16",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",

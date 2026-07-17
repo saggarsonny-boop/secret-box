@@ -1,0 +1,28 @@
+{
+  "offers": [
+    {
+      "id": "premium_monthly",
+      "name": "Secret Box Premium - Monthly",
+      "billing_mode": "subscription",
+      "price_usd": 1.99,
+      "billing_cycle": "month",
+      "checkout_url": "https://buy.stripe.com/14A6oJ6Mv3sReEa0YV0RG00"
+    },
+    {
+      "id": "premium_yearly",
+      "name": "Secret Box Premium - Yearly",
+      "billing_mode": "subscription",
+      "price_usd": 19.0,
+      "billing_cycle": "year",
+      "checkout_url": "https://buy.stripe.com/7sYcN79YHe7v53AcHD0RG01"
+    },
+    {
+      "id": "premium_lifetime",
+      "name": "Secret Box Premium - Basic License",
+      "billing_mode": "one_time",
+      "price_usd": 5.0,
+      "checkout_url": "https://buy.stripe.com/9B6aEZ7Qzd3rcw2bDz0RG02"
+    }
+  ],
+  "stripe_publishable_key": "pk_live_51TLUezPIZtoQZOG1xMEEx8CVcqo4vFcZxYERzeRWKPdsQncaQ4Y8ksJQcY3Ayl0Z0OGz2FjvcgnzaUqSGDSgH01M00qL1arsI6"
+}

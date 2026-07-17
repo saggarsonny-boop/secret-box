@@ -1,3 +1,4 @@
+export const runtime = 'edge';
 import { cookies } from 'next/headers';
 import { getDb } from '@/lib/db';
 

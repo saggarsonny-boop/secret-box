@@ -1,3 +1,4 @@
+export const runtime = 'edge';
 import { getDb } from '@/lib/db';
 import { NextResponse } from 'next/server';
 import { getSessionTokenIfPresent } from '@/lib/session';
