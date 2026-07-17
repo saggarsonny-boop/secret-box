@@ -6,7 +6,7 @@
 // CI:  `.github/workflows/secret-box-no-identity.yml` (added in this PR).
 
 import { pathToFileURL } from 'node:url';
-import { readFileSync } from 'node:fs';
+import { readFileSync, writeFileSync, unlinkSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 
@@ -25,8 +25,15 @@ const jsSource = tsSource
   .replace(/value as unknown as object/g, 'value')
   .replace(/\(obj as Record<string, unknown>\)/g, 'obj');
 
-const mod = await import(`data:text/javascript,${encodeURIComponent(jsSource)}\nexport { assertNoIdentity, PUBLIC_SECRET_COLUMNS, PUBLIC_COMMENT_COLUMNS };`);
+const tempPath = path.resolve(here, 'safety-temp.mjs');
+writeFileSync(tempPath, jsSource + '\nexport { assertNoIdentity, PUBLIC_SECRET_COLUMNS, PUBLIC_COMMENT_COLUMNS };');
+
+const mod = await import(pathToFileURL(tempPath).href);
 const { assertNoIdentity, PUBLIC_SECRET_COLUMNS, PUBLIC_COMMENT_COLUMNS } = mod;
+
+try {
+  unlinkSync(tempPath);
+} catch (e) {}
 
 let failed = 0;
 function assert(label, cond, detail = '') {
