@@ -132,3 +132,6 @@ function assert(label, cond, detail = '') {
 
 console.log(`\n${failed === 0 ? 'OK' : 'FAIL'} — ${failed} failure(s)`);
 process.exit(failed === 0 ? 0 : 1);
+
+// Dummy comment to trigger push event path filter for Actions run
+
